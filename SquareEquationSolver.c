@@ -1,17 +1,19 @@
 #include <stdio.h>
 #include <math.h>
+#include <float.h>
 #include <string.h>
 
 #include <assert.h>
 
 #define INF_ROOTS -1
+#define EPS 1e-10
 
 int solve_square(double a, double b, double c, double *root1, double *root2);
 
-int is_equal(double f1, double f2);
+int are_almost_equal(double f1, double f2);
 
-void test_solve_square(void);
 int test_case(const char *name, int expr);
+void test_solve_square(void);
 
 int main(int argc, char *argv[])
 {
@@ -83,9 +85,9 @@ int solve_square(double a, double b, double c, double *root1, double *root2)
     assert(root2 != NULL);
     assert(root1 != root2);
 
-    if (is_equal(a, 0)) {
-        if (is_equal(b, 0)) {
-            return (is_equal(c, 0)) ? INF_ROOTS : 0;
+    if (are_almost_equal(a, 0)) {
+        if (are_almost_equal(b, 0)) {
+            return (are_almost_equal(c, 0)) ? INF_ROOTS : 0;
         } else {
             *root1 = *root2 = -c / b;
             return 1;
@@ -107,22 +109,24 @@ int solve_square(double a, double b, double c, double *root1, double *root2)
     }
 }
 
-/*! Compares 2 floats
+/*! Compares 2 floating point numbers
  *
- *  @param f1 [in] first float
- *  @param f2 [in] second float
+ *  @param f1 [in] first number
+ *  @param f2 [in] second number
  *
- *  @return 1 if the floats are equal, otherwise 0
+ *  @return 1 if the number are almost equal considering the tolerance, otherwise 0
+ *
+ *  @note The tolerance is defined by EPS
  */
-int is_equal(double f1, double f2)
+int are_almost_equal(double f1, double f2)
 {
-    return (islessequal(f1, f2) && isgreaterequal(f1, f2)) ? 1 : 0;
+    return (fabs(f1 - f2) < EPS) ? 1 : 0;
 }
 
 /*! Tests a case
  *
- *  @param name name of test case
- *  @param expr expression to be tested
+ *  @param [in] name name of test case
+ *  @param [in] expr expression to be tested
  *
  *  @return 1 if expr is true, otherwise 0
  */
@@ -157,15 +161,15 @@ void test_solve_square(void)
     TEST_CASE("1 root, linear equation, number of roots",
               solve_square(0, 1, 1, &root1, &root2) == 1);
     TEST_CASE("1 root, linear equation, correctness of roots",
-              is_equal(root1, root2) && is_equal(root1, -1));
+              are_almost_equal(root1, root2) && are_almost_equal(root1, -1));
     TEST_CASE("1 root, quadratic equation, number of roots",
               solve_square(1, -2, 1, &root1, &root2) == 1);
     TEST_CASE("1 root, quadratic equation, correctness of roots",
-              is_equal(root1, root2) && is_equal(root1, 1));
+              are_almost_equal(root1, root2) && are_almost_equal(root1, 1));
     TEST_CASE("2 roots, number of roots",
               solve_square(2, 5, 3, &root1, &root2) == 2);
     TEST_CASE("2 roots, correctness of roots",
-              is_equal(root1, -1) && is_equal(root2, -1.5));
+              are_almost_equal(root1, -1) && are_almost_equal(root2, -1.5));
 #undef TEST_CASE
 
     printf("Finished testing solve_square function: %d tests passed, %d tests failed, the"
