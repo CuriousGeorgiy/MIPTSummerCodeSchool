@@ -9,7 +9,7 @@ int solve_square(double a, double b, double c, double *root1, double *root2);
 
 int is_equal(double f1, double f2);
 
-void test_solve_square();
+void test_solve_square(void);
 int test_case(const char *name, int expr);
 
 int main(int argc, char *argv[])
@@ -127,7 +127,7 @@ int test_case(const char *name, int expr)
 }
 
 //! \brief Tests solve_square function
-void test_solve_square()
+void test_solve_square(void)
 {
     double root1 = 0, root2 = 0;
     int n_tests_passed = 0, n_tests_failed = 0;
