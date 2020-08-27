@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <math.h>
-#include <float.h>
 #include <string.h>
 
 #include <assert.h>
@@ -95,16 +94,17 @@ int solve_square(double a, double b, double c, double *root1, double *root2)
     } else {
         double d = b * b - 4 * a * c;
 
-        if (isgreater(d, 0)) {
+        if (are_almost_equal(d, 0)) {
+            *root1 = *root2 = -b / (2 * a);
+
+            return 1;
+        } else if (d > 0) {
             *root1 = (-b + sqrt(d)) / (2 * a);
             *root2 = (-b - sqrt(d)) / (2 * a);
 
             return 2;
-        } else if (isless(d, 0)) {
-            return 0;
         } else {
-            *root1 = *root2 = -b / (2 * a);
-            return 1;
+            return 0;
         }
     }
 }
