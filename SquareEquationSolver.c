@@ -61,13 +61,18 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-//! \brief Solves square equation a*x^2 + b*x + c = 0 saves its roots
-//! \param a [in] quadratic coefficient
-//! \param b [in] linear coefficient
-//! \param c [in] free term
-//! \param root1 [out] less root
-//! \param root2 [out] greater root
-//! \return Returns the number of roots or INF_ROOTS in case of an infinite number of roots
+/*! Solves square equation a*x^2 + b*x + c = 0 saves its roots
+ *
+ *  @param a [in] quadratic coefficient
+ *  @param b [in] linear coefficient
+ *  @param c [in] free term
+ *  @param root1 [out] pointer to the greater root
+ *  @param root2 [out] pointer to the lesser root
+ *
+ *  @return The number of roots
+ *
+ *  @note Returns INF_ROOTS in case of an infinite number of roots
+ */
 int solve_square(double a, double b, double c, double *root1, double *root2)
 {
     assert(isfinite(a));
@@ -102,19 +107,25 @@ int solve_square(double a, double b, double c, double *root1, double *root2)
     }
 }
 
-//! \brief Compares 2 floats
-//! \param f1
-//! \param f2
-//! \return Returns 1 if the floats are equal, otherwise 0
+/*! Compares 2 floats
+ *
+ *  @param f1 [in] first float
+ *  @param f2 [in] second float
+ *
+ *  @return 1 if the floats are equal, otherwise 0
+ */
 int is_equal(double f1, double f2)
 {
     return (islessequal(f1, f2) && isgreaterequal(f1, f2)) ? 1 : 0;
 }
 
-//! \brief Tests a case
-//! \param name name of test case
-//! \param expr expr to be tested
-//! \return Returns 1 if expr is true, otherwise 0
+/*! Tests a case
+ *
+ *  @param name name of test case
+ *  @param expr expression to be tested
+ *
+ *  @return 1 if expr is true, otherwise 0
+ */
 int test_case(const char *name, int expr)
 {
     if (expr) {
@@ -126,7 +137,9 @@ int test_case(const char *name, int expr)
     }
 }
 
-//! \brief Tests solve_square function
+/*! Tests solve_square function
+ *
+ */
 void test_solve_square(void)
 {
     double root1 = 0, root2 = 0;
