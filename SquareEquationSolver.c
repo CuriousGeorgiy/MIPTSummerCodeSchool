@@ -1,56 +1,73 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
+#include <string.h>
 
 #define INF_ROOTS -1
 
-//! \brief Solves square equation a*x^2 + b*x + c = 0 saves its roots
-//! \param a [in] quadratic coefficient
-//! \param b [in] linear coefficient
-//! \param c [in] free term
-//! \param root1 [out] root with positive discriminant root
-//! \param root2 [out] root with negative discriminant root
-//! \return Return the number of roots or INF_ROOTS in case of infinite number of roots
 int solve_square(double a, double b, double c, double *root1, double *root2);
 
-//! \brief Compare 2 floats
-//! \param f1
-//! \param f2
-//! \return Return 1 if the floats are equal or 0 if they are not
 int is_equal(double f1, double f2);
 
-int main()
+void test_solve_square();
+int test_case(const char *name, int expr);
+
+int main(int argc, char *argv[])
 {
-    printf("Square equation solver\n");
+    if (argc == 1) {
+        printf("Square equation solver\n");
 
-    double a = 0, b = 0, c = 0;
-    printf("Enter a, b, c coefficients\n");
-    scanf("%lg %lg %lg", &a, &b, &c);
+        double a = 0, b = 0, c = 0;
+        printf("Enter a, b, c coefficients\n");
 
-    double root1 = 0, root2 = 0;
-    int nRoots = solve_square(a, b, c, &root1, &root2);
+        if (scanf("%lg %lg %lg", &a, &b, &c) != 3) {
+            printf("ERROR: invalid input\n");
+            return 2;
+        }
 
-    switch (nRoots) {
-    case 0:
-        printf("Square equation does not have roots\n");
-        break;
-    case 1:
-        printf("Square equation has 1 root: %lg\n", root1);
-        break;
-    case 2:
-        printf("Square equation has 2 roots: %lg and %lg\n", root1, root2);
-        break;
-    case INF_ROOTS:
-        printf("Square equation has an infinite number of roots\n");
-        break;
-    default:
-        printf("ERROR: unexpected behavior of square equation solver\n");
-        return 1;
+        double root1 = 0, root2 = 0;
+        int n_roots = solve_square(a, b, c, &root1, &root2);
+
+        switch (n_roots) {
+        case 0:
+            printf("Square equation does not have roots\n");
+            break;
+        case 1:
+            printf("Square equation has 1 root: %lg\n", root1);
+            break;
+        case 2:
+            printf("Square equation has 2 roots: %lg and %lg\n", root1, root2);
+            break;
+        case INF_ROOTS:
+            printf("Square equation has an infinite number of roots\n");
+            break;
+        default:
+            printf("ERROR: unexpected behavior of square equation solver\n");
+            return 1;
+        }
+    } else if (argc == 2) {
+        if (strcmp(argv[1], "--t") == 0 || strcmp(argv[1], "-test") == 0) {
+            test_solve_square();
+        } else {
+            printf("ERROR: invalid command line argument, use --t or -test for testing");
+            return 3;
+        }
+    } else {
+        printf("ERROR: invalid command line arguments, use --t or -test for testing");
+        return 3;
     }
 
     return 0;
 }
 
+
+//! \brief Solves square equation a*x^2 + b*x + c = 0 saves its roots
+//! \param a [in] quadratic coefficient
+//! \param b [in] linear coefficient
+//! \param c [in] free term
+//! \param root1 [out] less root
+//! \param root2 [out] greater root
+//! \return Returns the number of roots or INF_ROOTS in case of an infinite number of roots
 int solve_square(double a, double b, double c, double *root1, double *root2)
 {
     assert(isfinite(a));
@@ -63,7 +80,7 @@ int solve_square(double a, double b, double c, double *root1, double *root2)
 
     if (is_equal(a, 0)) {
         if (is_equal(b, 0)) {
-            return (c == 0) ? INF_ROOTS : 0;
+            return (is_equal(c, 0)) ? INF_ROOTS : 0;
         } else {
             *root1 = *root2 = -c / b;
             return 1;
@@ -85,7 +102,56 @@ int solve_square(double a, double b, double c, double *root1, double *root2)
     }
 }
 
+//! \brief Compares 2 floats
+//! \param f1
+//! \param f2
+//! \return Returns 1 if the floats are equal, otherwise 0
 int is_equal(double f1, double f2)
 {
     return (islessequal(f1, f2) && isgreaterequal(f1, f2)) ? 1 : 0;
+}
+
+//! \brief Tests a case
+//! \param name name of test case
+//! \param expr expr to be tested
+//! \return Returns 1 if expr is true, otherwise 0
+int test_case(const char *name, int expr)
+{
+    if (expr) {
+        printf("\ttest \"%s\" passed\n", name);
+        return 1;
+    } else {
+        printf("\ttest \"%s\" failed\n", name);
+        return 0;
+    }
+}
+
+//! \brief Tests solve_square function
+void test_solve_square()
+{
+    double root1 = 0, root2 = 0;
+    int n_tests_passed = 0, n_tests_failed = 0;
+
+    printf("Testing solve_square function:\n");
+    test_case("infinite number of roots",
+              solve_square(0, 0, 0, &root1, &root2) == INF_ROOTS) ? ++n_tests_passed
+                                                                  : ++n_tests_failed;
+    test_case("0 roots, constant equation",
+              solve_square(0, 0, 1, &root1, &root2) == 0) ? ++n_tests_passed : ++n_tests_failed;
+    test_case("0 roots, quadratic equation",
+              solve_square(1, 1, 1, &root1, &root2) == 0) ? ++n_tests_passed : ++n_tests_failed;
+    test_case("1 root, linear equation, number of roots",
+              solve_square(0, 1, 1, &root1, &root2) == 1) ? ++n_tests_passed : ++n_tests_failed;
+    test_case("1 root, linear equation, correctness of roots",
+              is_equal(root1, root2) && is_equal(root1, -1)) ? ++n_tests_passed : ++n_tests_failed;
+    test_case("1 root, quadratic equation, number of roots",
+              solve_square(1, -2, 1, &root1, &root2) == 1) ? ++n_tests_passed : ++n_tests_failed;
+    test_case("1 root, quadratic equation, correctness of roots",
+              is_equal(root1, root2) && is_equal(root1, 1)) ? ++n_tests_passed : ++n_tests_failed;
+    test_case("2 roots, number of roots",
+              solve_square(2, 5, 3, &root1, &root2) == 2) ? ++n_tests_passed : ++n_tests_failed;
+    test_case("2 roots, correctness of roots",
+              is_equal(root1, -1) && is_equal(root2, -1.5)) ? ++n_tests_passed : ++n_tests_failed;
+    printf("Finished testing solve_square function: %d tests passed, %d tests failed\n",
+           n_tests_passed, n_tests_failed);
 }
