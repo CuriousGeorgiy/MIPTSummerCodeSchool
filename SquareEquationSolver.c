@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <math.h>
-#include <assert.h>
 #include <string.h>
+
+#include <assert.h>
 
 #define INF_ROOTS -1
 
@@ -49,17 +50,16 @@ int main(int argc, char *argv[])
         if (strcmp(argv[1], "--t") == 0 || strcmp(argv[1], "-test") == 0) {
             test_solve_square();
         } else {
-            printf("ERROR: invalid command line argument, use --t or -test for testing");
+            printf("ERROR: invalid command line argument, use --t or -test for testing\n");
             return 3;
         }
     } else {
-        printf("ERROR: invalid command line arguments, use --t or -test for testing");
+        printf("ERROR: invalid command line arguments, use --t or -test for testing\n");
         return 3;
     }
 
     return 0;
 }
-
 
 //! \brief Solves square equation a*x^2 + b*x + c = 0 saves its roots
 //! \param a [in] quadratic coefficient
@@ -133,25 +133,29 @@ void test_solve_square(void)
     int n_tests_passed = 0, n_tests_failed = 0;
 
     printf("Testing solve_square function:\n");
-    test_case("infinite number of roots",
-              solve_square(0, 0, 0, &root1, &root2) == INF_ROOTS) ? ++n_tests_passed
-                                                                  : ++n_tests_failed;
-    test_case("0 roots, constant equation",
-              solve_square(0, 0, 1, &root1, &root2) == 0) ? ++n_tests_passed : ++n_tests_failed;
-    test_case("0 roots, quadratic equation",
-              solve_square(1, 1, 1, &root1, &root2) == 0) ? ++n_tests_passed : ++n_tests_failed;
-    test_case("1 root, linear equation, number of roots",
-              solve_square(0, 1, 1, &root1, &root2) == 1) ? ++n_tests_passed : ++n_tests_failed;
-    test_case("1 root, linear equation, correctness of roots",
-              is_equal(root1, root2) && is_equal(root1, -1)) ? ++n_tests_passed : ++n_tests_failed;
-    test_case("1 root, quadratic equation, number of roots",
-              solve_square(1, -2, 1, &root1, &root2) == 1) ? ++n_tests_passed : ++n_tests_failed;
-    test_case("1 root, quadratic equation, correctness of roots",
-              is_equal(root1, root2) && is_equal(root1, 1)) ? ++n_tests_passed : ++n_tests_failed;
-    test_case("2 roots, number of roots",
-              solve_square(2, 5, 3, &root1, &root2) == 2) ? ++n_tests_passed : ++n_tests_failed;
-    test_case("2 roots, correctness of roots",
-              is_equal(root1, -1) && is_equal(root2, -1.5)) ? ++n_tests_passed : ++n_tests_failed;
-    printf("Finished testing solve_square function: %d tests passed, %d tests failed\n",
-           n_tests_passed, n_tests_failed);
+
+#define TEST_CASE(name, expr) test_case((name), (expr)) ? ++n_tests_passed : ++n_tests_failed
+    TEST_CASE("infinite number of roots",
+              solve_square(0, 0, 0, &root1, &root2) == INF_ROOTS);
+    TEST_CASE("0 roots, constant equation",
+              solve_square(0, 0, 1, &root1, &root2) == 0);
+    TEST_CASE("0 roots, quadratic equation",
+              solve_square(1, 1, 1, &root1, &root2) == 0);
+    TEST_CASE("1 root, linear equation, number of roots",
+              solve_square(0, 1, 1, &root1, &root2) == 1);
+    TEST_CASE("1 root, linear equation, correctness of roots",
+              is_equal(root1, root2) && is_equal(root1, -1));
+    TEST_CASE("1 root, quadratic equation, number of roots",
+              solve_square(1, -2, 1, &root1, &root2) == 1);
+    TEST_CASE("1 root, quadratic equation, correctness of roots",
+              is_equal(root1, root2) && is_equal(root1, 1));
+    TEST_CASE("2 roots, number of roots",
+              solve_square(2, 5, 3, &root1, &root2) == 2);
+    TEST_CASE("2 roots, correctness of roots",
+              is_equal(root1, -1) && is_equal(root2, -1.5));
+#undef TEST_CASE
+
+    printf("Finished testing solve_square function: %d tests passed, %d tests failed, the"
+           "total number of tests was %d\n",
+           n_tests_passed, n_tests_failed, n_tests_passed + n_tests_failed);
 }
