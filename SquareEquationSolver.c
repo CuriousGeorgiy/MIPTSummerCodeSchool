@@ -47,6 +47,8 @@ int main(int argc, char *argv[])
             printf("ERROR: unexpected behavior of square equation solver\n");
             return 1;
         }
+
+        return 0;
     } else if (argc == 2) {
         if (strcmp(argv[1], "--t") == 0 || strcmp(argv[1], "-test") == 0) {
             test_solve_square();
@@ -58,11 +60,9 @@ int main(int argc, char *argv[])
         printf("ERROR: invalid command line arguments, use --t or -test for testing\n");
         return 3;
     }
-
-    return 0;
 }
 
-/*! Solves square equation a*x^2 + b*x + c = 0 saves its roots
+/*! Solves square equation a*x^2 + b*x + c = 0 and saves its roots
  *
  *  @param a [in] quadratic coefficient
  *  @param b [in] linear coefficient
