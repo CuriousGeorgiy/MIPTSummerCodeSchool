@@ -151,7 +151,7 @@ void test_solve_square(void)
 
     printf("Testing solve_square function:\n");
 
-#define TEST_CASE(name, expr) test_case((name), (expr)) ? ++n_tests_passed : ++n_tests_failed
+#define TEST_CASE(name, expr) (test_case((name), (expr)) ? ++n_tests_passed : ++n_tests_failed)
     TEST_CASE("infinite number of roots",
               solve_square(0, 0, 0, &root1, &root2) == INF_ROOTS);
     TEST_CASE("0 roots, constant equation",
