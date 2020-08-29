@@ -26,8 +26,9 @@ struct line **allocate_array_of_lines(int n_lines);
 void free_line(struct line *l);
 void free_array_of_lines(struct line **lines, int n_lines);
 
+struct line **read_lines_from_file(FILE *input, int *n_lines);
 int count_lines_in_file(FILE *input);
-struct line *read_line(FILE *input, struct line *l);
+struct line *read_line_from_file(FILE *input, struct line *l);
 int read_line_to_buf(FILE *input, int buf_pos);
 
 void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
@@ -49,14 +50,14 @@ int line_ptr_cmp_reverse(const void *arg1, const void *arg2);
 
 int main(int argc, char *argv[])
 {
-    printf("Eugene Onegin sort\n\n"
+    printf("Eugene Onegin sort\n"
            "Poem lines from input file (first command line argument) will be sorted and written\n"
-           "to output file (second command line argument). The order in which 2 lines are\n"
-           "processed during comparison is direct (default) or reverse (set by the the third\n"
-           "optional command line argument \'r\')\n\n");
+           "to output file (second command line argument), default output file is \"output.txt\".\n"
+           "The order in which 2 lines are processed during comparison is direct (default) or\n"
+           "reverse (set by the the third optional command line argument \'r\')\n\n");
 
-    if (argc >= 3 && argc <= 4) {
-        char *input_file_name = argv[1], *output_file_name = argv[2];
+    if (argc >= 2 && argc <= 4) {
+        char *input_file_name = argv[1], *output_file_name = (argc >= 3) ? argv[2] : "output.txt";
         char sort_mode = 'd';
 
         if (argc == 4) {
@@ -70,14 +71,10 @@ int main(int argc, char *argv[])
 
         FILE *input = NULL;
         if ((input = fopen(input_file_name, "r")) != NULL) {
-            int n_lines = count_lines_in_file(input);
+            int n_lines = 0;
             struct line **lines = NULL;
 
-            if ((lines = allocate_array_of_lines(n_lines)) != NULL) {
-                int i = 0;
-                for (i = 0; i < n_lines; ++i) {
-                    read_line(input, lines[i]);
-                }
+            if ((lines = read_lines_from_file(input, &n_lines)) != NULL) {
                 fclose(input);
                 free(buf);
 
@@ -95,12 +92,15 @@ int main(int argc, char *argv[])
             printf("ERROR: invalid file name passed to fopen in main\n");
             return 1;
         }
-    } else {
+    } else if (argc > 4) {
         printf("ERROR: invalid command line arguments - first must be the input file name,\n"
-               "second must be the output file name, the third argument is optional and must be\n"
-               "equal to \'--r\'\n (sets the order in which 2 lines will be processed during\n"
-               "comparison to reverse)\n");
+               "second is optional and sets the output file name, the third argument is\n"
+               "optional and must be equal to \'--r\'\n (sets the order in which 2 lines will\n"
+               "be processed during comparison to reverse)\n");
         return 3;
+    } else {
+        printf("Run the program with command line arguments\n");
+        return 0;
     }
 }
 
@@ -160,6 +160,40 @@ void free_array_of_lines(struct line **lines, int n_lines)
 }
 
 /*!
+ * Reads lines from file input
+ *
+ * @param [in] input pointer to input file
+ * @param [out] n_lines number of lines read
+ *
+ * @return pointer to array of pointers to line
+ *
+ * @note Returns NULL in case of failure
+ */
+struct line **read_lines_from_file(FILE *input, int *n_lines)
+{
+    assert(input != NULL);
+    assert(n_lines != NULL);
+
+    *n_lines = count_lines_in_file(input);
+    struct line **lines = NULL;
+
+    if ((lines = allocate_array_of_lines(*n_lines)) != NULL) {
+        int i = 0;
+        for (i = 0; i < *n_lines; ++i) {
+            if (read_line_from_file(input, lines[i]) == NULL) {
+                printf("ERROR: read_line_from_file returned NULL in read_lines_from_file\n");
+                return NULL;
+            }
+        }
+
+        return lines;
+    } else {
+        printf("ERROR: allocate_array_of_lines return NULL in read_lines_from_file\n");
+        return NULL;
+    }
+}
+
+/*!
  * Reads a line from input and writes it to l
  *
  * @param [in] input pointer to input file
@@ -169,13 +203,13 @@ void free_array_of_lines(struct line **lines, int n_lines)
  *
  * @note Returns NULL in case of failure
  */
-struct line *read_line(FILE *input, struct line *l)
+struct line *read_line_from_file(FILE *input, struct line *l)
 {
     assert(input != NULL);
     assert(l != NULL);
 
     if ((buf == NULL) && ((buf = malloc(buf_size * sizeof(char))) == NULL)) {
-        printf("ERROR: malloc returned NULL in read_line\n");
+        printf("ERROR: malloc returned NULL in read_line_from_file\n");
         return NULL;
     } else {
         int len = read_line_to_buf(input, 0);
@@ -187,7 +221,7 @@ struct line *read_line(FILE *input, struct line *l)
                 strcpy(l->s, buf);
                 return l;
             } else {
-                printf("ERROR: malloc returned NULL in read_line\n");
+                printf("ERROR: malloc returned NULL in read_line_from_file\n");
                 return NULL;
             }
         } else {
@@ -209,6 +243,9 @@ struct line *read_line(FILE *input, struct line *l)
  */
 int read_line_to_buf(FILE *input, int buf_pos)
 {
+    assert(input != NULL);
+    assert(buf_pos >= 0);
+
     if (fgets(buf + buf_pos, buf_size - buf_pos, input) != NULL) {
         size_t len = strlen(buf);
 
@@ -280,6 +317,12 @@ void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
                                 int (*line_cmp)(const void *l1, const void *l2),
                                 char *file_name)
 {
+    assert(lines != NULL);
+    assert(line_cmp != NULL);
+    assert(file_name != NULL);
+
+    assert(n_lines > 0);
+
     struct line **lines_cp = NULL;
     if ((lines_cp = allocate_array_of_lines(n_lines)) != NULL) {
         int i = 0;
@@ -319,6 +362,12 @@ void tree_sort_with_output_to_file(const struct line *const *lines, int n_lines,
                                    int (*line_cmp)(const void *l1, const void *l2),
                                    char *file_name)
 {
+    assert(lines != NULL);
+    assert(line_cmp != NULL);
+    assert(file_name != NULL);
+
+    assert(n_lines > 0);
+
     struct node *root = NULL;
     if ((root = generate_bst(lines, n_lines, line_cmp)) != NULL) {
         FILE *f = NULL;
@@ -351,6 +400,7 @@ struct node *generate_bst(const struct line *const *lines, int n_lines,
                           int (*line_cmp)(const void *l1, const void *l2))
 {
     assert(lines != NULL);
+    assert(line_cmp != NULL);
 
     assert(n_lines > 0);
 
@@ -392,6 +442,10 @@ struct node *generate_bst(const struct line *const *lines, int n_lines,
 struct node *insert_node_into_bst(struct node *parent, const struct line *l,
                                   int (*line_cmp)(const void *l1, const void *l2))
 {
+    assert(parent != NULL);
+    assert(l != NULL);
+    assert(line_cmp != NULL);
+
     if (line_cmp(&parent->l, &l) > 0) {
         if (parent->left == NULL) {
             if ((parent->left = malloc(sizeof(struct node))) != NULL) {
@@ -489,6 +543,9 @@ void delete_bst(struct node *current)
  */
 int line_ptr_cmp_direct(const void *arg1, const void *arg2)
 {
+    assert(arg1 != NULL);
+    assert(arg2 != NULL);
+
     const struct line *const *l1 = arg1, *const *l2 = arg2;
 
     char *s1 = (*l1)->s, *s2 = (*l2)->s;
