@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,8 +29,10 @@ void free_array_of_lines(struct line **lines, int n_lines);
 
 struct line **read_lines_from_file(FILE *input, int *n_lines);
 int count_lines_in_file(FILE *input);
-struct line *read_line_from_file(FILE *input, struct line *l);
+struct line *read_line_from_file(FILE *input);
 int read_line_to_buf(FILE *input, int buf_pos);
+
+void to_lower_line(struct line *l);
 
 void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
                                 int (*line_cmp)(const void *l1, const void *l2),
@@ -50,19 +53,19 @@ int line_ptr_cmp_reverse(const void *arg1, const void *arg2);
 
 int main(int argc, char *argv[])
 {
-    printf("Eugene Onegin sort\n"
-           "Poem lines from input file (first command line argument) will be sorted and written\n"
-           "to output file (second command line argument), default output file is \"output.txt\".\n"
-           "The order in which 2 lines are processed during comparison is direct (default) or\n"
-           "reverse (set by the the third optional command line argument \'r\')\n\n");
+    printf("Eugene Onegin sort\n\n"
+           "Poem lines from input file (mandatory first command line argument) will be sorted and\n"
+           "written to output file \"output.txt\". The order in which 2 lines are processed\n"
+           "during comparison is direct (default) or reverse (set by optional command line\n"
+           "argument \'--r\')\n\n");
 
-    if (argc >= 2 && argc <= 4) {
-        char *input_file_name = argv[1], *output_file_name = (argc >= 3) ? argv[2] : "output.txt";
+    if (argc >= 2 && argc <= 3) {
+        char *input_file_name = argv[1], *output_file_name = "output.txt";
         char sort_mode = 'd';
 
-        if (argc == 4) {
-            if ((strcmp(argv[3], "--r") == 0)) {
-                sort_mode = argv[3][2];
+        if (argc == 3) {
+            if ((strcmp(argv[2], "--r") == 0)) {
+                sort_mode = argv[2][2];
             } else {
                 printf("ERROR: invalid optional third command line argument (must be \'--r\')\n");
                 return 3;
@@ -78,10 +81,14 @@ int main(int argc, char *argv[])
                 fclose(input);
                 free(buf);
 
-                tree_sort_with_output_to_file(lines, n_lines,
-                                              (sort_mode == 'd') ? line_ptr_cmp_direct :
-                                              line_ptr_cmp_reverse, output_file_name);
-                free_array_of_lines(lines, n_lines);
+                if (n_lines > 0) {
+                    tree_sort_with_output_to_file(lines, n_lines,
+                                                  (sort_mode == 'd') ? line_ptr_cmp_direct :
+                                                  line_ptr_cmp_reverse, output_file_name);
+                    free_array_of_lines(lines, n_lines);
+                } else {
+                    printf("Input file was empty, so output file wasn't created\n");
+                }
 
                 return 0;
             } else {
@@ -92,20 +99,19 @@ int main(int argc, char *argv[])
             printf("ERROR: invalid file name passed to fopen in main\n");
             return 1;
         }
-    } else if (argc > 4) {
+    } else if (argc > 3) {
         printf("ERROR: invalid command line arguments - first must be the input file name,\n"
-               "second is optional and sets the output file name, the third argument is\n"
-               "optional and must be equal to \'--r\'\n (sets the order in which 2 lines will\n"
-               "be processed during comparison to reverse)\n");
+               "the second one is optional and must be equal to \'--r\' (sets the order in\n"
+               "which 2 lines will be processed during comparison to reverse)\n");
         return 3;
     } else {
-        printf("Run the program with command line arguments\n");
-        return 0;
+        printf("ERROR: run the program with command line arguments\n");
+        return 3;
     }
 }
 
 /*!
- * Allocates an array of pointers to line and allocates each pointer to line
+ * Allocates an array of pointers to line
  *
  * @param [in] n_lines array size
  *
@@ -116,18 +122,10 @@ int main(int argc, char *argv[])
 struct line **allocate_array_of_lines(int n_lines)
 {
     struct line **lines = NULL;
-    if ((lines = malloc(n_lines * sizeof(struct line *))) != NULL) {
-        int i = 0;
-        for (i = 0; i < n_lines; ++i) {
-            if ((lines[i] = malloc(sizeof(struct line))) == NULL) {
-                printf("ERROR: malloc returned NULL in allocate_array_of_lines\n");
-                return NULL;
-            }
-        }
-
+    if ((lines = calloc(n_lines, sizeof(struct line *))) != NULL) {
         return lines;
     } else {
-        printf("ERROR: malloc returned NULL in allocate_array_of_lines\n");
+        printf("ERROR: calloc returned NULL in allocate_array_of_lines\n");
         return NULL;
     }
 }
@@ -160,7 +158,7 @@ void free_array_of_lines(struct line **lines, int n_lines)
 }
 
 /*!
- * Reads lines from file input
+ * Reads lines from file input and returns an array containing them
  *
  * @param [in] input pointer to input file
  * @param [out] n_lines number of lines read
@@ -180,7 +178,7 @@ struct line **read_lines_from_file(FILE *input, int *n_lines)
     if ((lines = allocate_array_of_lines(*n_lines)) != NULL) {
         int i = 0;
         for (i = 0; i < *n_lines; ++i) {
-            if (read_line_from_file(input, lines[i]) == NULL) {
+            if ((lines[i] = read_line_from_file(input)) == NULL) {
                 printf("ERROR: read_line_from_file returned NULL in read_lines_from_file\n");
                 return NULL;
             }
@@ -194,19 +192,17 @@ struct line **read_lines_from_file(FILE *input, int *n_lines)
 }
 
 /*!
- * Reads a line from input and writes it to l
+ * Reads a line from input and returns it
  *
  * @param [in] input pointer to input file
- * @param [out] l pointer to line
  *
- * @return l
+ * @return Pointer to line
  *
  * @note Returns NULL in case of failure
  */
-struct line *read_line_from_file(FILE *input, struct line *l)
+struct line *read_line_from_file(FILE *input)
 {
     assert(input != NULL);
-    assert(l != NULL);
 
     if ((buf == NULL) && ((buf = malloc(buf_size * sizeof(char))) == NULL)) {
         printf("ERROR: malloc returned NULL in read_line_from_file\n");
@@ -214,14 +210,15 @@ struct line *read_line_from_file(FILE *input, struct line *l)
     } else {
         int len = read_line_to_buf(input, 0);
 
-        if (len > 0) {
+        if (len >= 0) {
+            struct line *l = calloc(1, sizeof(struct line));
             l->len = len;
 
-            if ((l->s = malloc(len + 1)) != NULL) {
+            if ((l->s = calloc(len + 1, sizeof(char))) != NULL) {
                 strcpy(l->s, buf);
                 return l;
             } else {
-                printf("ERROR: malloc returned NULL in read_line_from_file\n");
+                printf("ERROR: calloc returned NULL in read_line_from_file\n");
                 return NULL;
             }
         } else {
@@ -263,7 +260,7 @@ int read_line_to_buf(FILE *input, int buf_pos)
                     return read_line_to_buf(input, len);
                 } else {
                     printf("ERROR: realloc returned NULL in read_line_to_buf\n");
-                    return 0;
+                    return -1;
                 }
             }
         }
@@ -273,7 +270,23 @@ int read_line_to_buf(FILE *input, int buf_pos)
 }
 
 /*!
- * Counts the number of lines in file input
+ * Converts an alpha to lower
+ *
+ * @param [in] c character
+ *
+ * @return Lowercase version of c or unmodified c, if it's not an alpha
+ */
+int to_lower(int c)
+{
+    if (IS_ALPHA(c)) {
+        return tolower(c);
+    } else {
+        return c;
+    }
+}
+
+/*!
+ * Counts the number of lines in file input, clears error flags of input and rewinds it
  *
  * @param [in] input pointer to input file
  *
@@ -336,7 +349,9 @@ void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
 
         if ((f = fopen(file_name, "w")) != NULL) {
             for (i = 0; i < n_lines; ++i) {
-                fprintf(f, "%s\n", lines_cp[i]->s);
+                if (lines_cp[i]->len != 0) {
+                    fprintf(f, "%s\n", lines_cp[i]->s);
+                }
             }
             fclose(f);
             free_array_of_lines(lines_cp, n_lines);
@@ -404,26 +419,29 @@ struct node *generate_bst(const struct line *const *lines, int n_lines,
 
     assert(n_lines > 0);
 
-    struct node *root = malloc(sizeof(struct node));
+    struct node *root = NULL;
+    if ((root = calloc(1, sizeof(struct node))) != NULL) {
+        if ((root->l = calloc(1, sizeof(struct line))) != NULL) {
+            memcpy(root->l, lines[0], sizeof(struct line));
 
-    if ((root->l = malloc(sizeof(struct line))) != NULL) {
-        memcpy(root->l, lines[0], sizeof(struct line));
+            root->left = NULL;
+            root->right = NULL;
 
-        root->left = NULL;
-        root->right = NULL;
-
-        int i = 1;
-        for (i = 1; i < n_lines; ++i) {
-            if (insert_node_into_bst(root, lines[i], line_cmp) == NULL) {
-                printf("ERROR: insert_node_into_bst returned NULL in generate_bst");
-                return NULL;
+            int i = 1;
+            for (i = 1; i < n_lines; ++i) {
+                if (insert_node_into_bst(root, lines[i], line_cmp) == NULL) {
+                    printf("ERROR: insert_node_into_bst returned NULL in generate_bst");
+                    return NULL;
+                }
             }
+
+            return root;
+        } else {
+            printf("ERROR: calloc returned NULL in generate_bst");
+            return NULL;
         }
-
-        return root;
     } else {
-        printf("ERROR: malloc returned NULL in generate_bst");
-
+        printf("ERROR: calloc returned NULL in generate_bst");
         return NULL;
     }
 }
@@ -448,19 +466,19 @@ struct node *insert_node_into_bst(struct node *parent, const struct line *l,
 
     if (line_cmp(&parent->l, &l) > 0) {
         if (parent->left == NULL) {
-            if ((parent->left = malloc(sizeof(struct node))) != NULL) {
-                if ((parent->left->l = malloc(sizeof(struct line))) != NULL) {
+            if ((parent->left = calloc(1, sizeof(struct node))) != NULL) {
+                if ((parent->left->l = calloc(1, sizeof(struct line))) != NULL) {
                     memcpy(parent->left->l, l, sizeof(struct line));
                     parent->left->left = NULL;
                     parent->left->right = NULL;
 
                     return parent->left;
                 } else {
-                    printf("ERROR: malloc returned NULL in insert_node_into_bst\n");
+                    printf("ERROR: calloc returned NULL in insert_node_into_bst\n");
                     return NULL;
                 }
             } else {
-                printf("ERROR: malloc returned NULL in insert_node_into_bst\n");
+                printf("ERROR: calloc returned NULL in insert_node_into_bst\n");
                 return NULL;
             }
         } else {
@@ -468,19 +486,19 @@ struct node *insert_node_into_bst(struct node *parent, const struct line *l,
         }
     } else if (line_cmp(&parent->l, &l) < 0) {
         if (parent->right == NULL) {
-            if ((parent->right = malloc(sizeof(struct node))) != NULL) {
-                if ((parent->right->l = malloc(sizeof(struct line))) != NULL) {
+            if ((parent->right = calloc(1, sizeof(struct node))) != NULL) {
+                if ((parent->right->l = calloc(1, sizeof(struct line))) != NULL) {
                     memcpy(parent->right->l, l, sizeof(struct line));
                     parent->right->left = NULL;
                     parent->right->right = NULL;
 
                     return parent->right;
                 } else {
-                    printf("ERROR: malloc returned NULL in insert_node_into_bst\n");
+                    printf("ERROR: calloc returned NULL in insert_node_into_bst\n");
                     return NULL;
                 }
             } else {
-                printf("ERROR: malloc returned NULL in insert_node_into_bst\n");
+                printf("ERROR: calloc returned NULL in insert_node_into_bst\n");
                 return NULL;
             }
         } else {
@@ -504,7 +522,9 @@ void write_bst_to_file(const struct node *current, FILE *output)
         write_bst_to_file(current->left, output);
     }
 
-    fprintf(output, "%s\n", current->l->s);
+    if (current->l->len != 0) {
+        fprintf(output, "%s\n", current->l->s);
+    }
 
     if (current->right != NULL) {
         write_bst_to_file(current->right, output);
@@ -546,12 +566,11 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
     assert(arg1 != NULL);
     assert(arg2 != NULL);
 
-    const struct line *const *l1 = arg1, *const *l2 = arg2;
-
-    char *s1 = (*l1)->s, *s2 = (*l2)->s;
+    const struct line * const *l1 = arg1, * const *l2 = arg2;
+    const char *s1 = (*l1)->s, *s2 = (*l2)->s;
 
     while (*s1 != '\0' && *s2 != '\0') {
-        if (*s1 == *s2) {
+        if (to_lower(*s1) == to_lower(*s2)) {
             ++s1;
             ++s2;
         } else {
@@ -576,7 +595,7 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
         ++s2;
     }
 
-    if ((*s1 == *s2) && (*s1 == '\0')) {
+    if ((to_lower(*s1) == to_lower(*s2)) && (*s1 == '\0')) {
         return 0;
     } else {
         if (*s1 == '\0') {
@@ -584,7 +603,7 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
         } else if (*s2 == '\0') {
             return 1;
         } else {
-            return (*s1 > *s2) ? 1 : -1;
+            return (tolower(*s1) > tolower(*s2)) ? 1 : -1;
         }
     }
 }
@@ -601,11 +620,11 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
  */
 int line_ptr_cmp_reverse(const void *arg1, const void *arg2)
 {
-    const struct line *const *l1 = arg1, *const *l2 = arg2;
-    char *s1 = (*l1)->s + (*l1)->len - 1, *s2 = (*l2)->s + (*l2)->len - 1;
+    const struct line * const *l1 = arg1, * const *l2 = arg2;
+    const char *s1 = (*l1)->s + (*l1)->len - 1, *s2 = (*l2)->s + (*l2)->len - 1;
 
     while (s1 != (*l1)->s && s2 != (*l2)->s) {
-        if (*s1 == *s2) {
+        if (to_lower(*s1) == to_lower(*s2)) {
             --s1;
             --s2;
         } else {
@@ -632,10 +651,10 @@ int line_ptr_cmp_reverse(const void *arg1, const void *arg2)
 
     if ((s1 == (*l1)->s) == (s2 == (*l2)->s)) {
         if (IS_ALPHA(*s1) && IS_ALPHA(*s2)) {
-            if (*s1 == *s2) {
+            if (to_lower(*s1) == to_lower(*s2)) {
                 return 0;
             } else {
-                return (*s1 > *s2) ? 1 : -1;
+                return (tolower(*s1) > tolower(*s2)) ? 1 : -1;
             }
         } else if (!IS_ALPHA(*s1) && !IS_ALPHA(*s2)) {
             return 0;
