@@ -464,7 +464,7 @@ struct node *insert_node_into_bst(struct node *parent, const struct line *l,
     assert(l != NULL);
     assert(line_cmp != NULL);
 
-    if (line_cmp(&parent->l, &l) > 0) {
+    if ((*line_cmp)(&parent->l, &l) >= 0) {
         if (parent->left == NULL) {
             if ((parent->left = calloc(1, sizeof(struct node))) != NULL) {
                 if ((parent->left->l = calloc(1, sizeof(struct line))) != NULL) {
@@ -484,7 +484,7 @@ struct node *insert_node_into_bst(struct node *parent, const struct line *l,
         } else {
             return insert_node_into_bst(parent->left, l, line_cmp);
         }
-    } else if (line_cmp(&parent->l, &l) < 0) {
+    } else {
         if (parent->right == NULL) {
             if ((parent->right = calloc(1, sizeof(struct node))) != NULL) {
                 if ((parent->right->l = calloc(1, sizeof(struct line))) != NULL) {
