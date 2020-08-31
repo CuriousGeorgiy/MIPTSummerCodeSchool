@@ -4,36 +4,32 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DEFAULT_BUF_SIZE 100
-
 #define IS_ALPHA(c) (('A' <= (c)) && ((c) <= 'Z') || ('a' <= (c)) && ((c) <= 'z'))
 
-int buf_size = DEFAULT_BUF_SIZE;
-
-char *buf = NULL;
-
+/*!
+ * Data structure for text lines. Contains a pointer to a null-terminated string and its length
+ */
 struct line {
     char *s;
     int len;
 };
 
+/*!
+ * Data structure defining the node of a binary search tree. Contains a pointer to line and two
+ * pointers to child nodes
+ */
 struct node {
     struct line *l;
     struct node *left;
     struct node *right;
 };
 
-struct line **allocate_array_of_lines(int n_lines);
 void free_line(struct line *l);
 void free_array_of_lines(struct line **lines, int n_lines);
 
 struct line **read_lines_from_file(FILE *input, int *n_lines);
-int count_lines_in_file(FILE *input);
 int count_chars_and_lines_in_file(FILE *input, int *n_lines);
-struct line *read_line_from_file(FILE *input);
-int read_line_to_buf(FILE *input, int buf_pos);
-
-void to_lower_line(struct line *l);
+char *read_file_to_buf(FILE *input, int *n_lines);
 
 void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
                                 int (*line_cmp)(const void *, const void *),
@@ -78,15 +74,14 @@ int main(int argc, char *argv[])
             int n_lines = 0;
             struct line **lines = NULL;
 
-            if ((lines = read_lines_from_file(input, &n_lines)) != NULL) {
+            if (((lines = read_lines_from_file(input, &n_lines)) != NULL) || (n_lines == 0)) {
                 fclose(input);
-                free(buf);
 
                 if (n_lines > 0) {
                     tree_sort_with_output_to_file(lines, n_lines,
-                                               (sort_mode == 'd') ? line_ptr_cmp_direct
-                                                                  : line_ptr_cmp_reverse,
-                                               output_file_name);
+                                                  (sort_mode == 'd') ? line_ptr_cmp_direct
+                                                                     : line_ptr_cmp_reverse,
+                                                  output_file_name);
                     free_array_of_lines(lines, n_lines);
                 } else {
                     printf("Input file was empty, so output file wasn't created\n");
@@ -94,7 +89,8 @@ int main(int argc, char *argv[])
 
                 return 0;
             } else {
-                printf("ERROR: allocate_array_of_lines returned NULL in main\n");
+                fclose(input);
+                printf("ERROR: get_lines_from_file returned NULL in main\n");
                 return 2;
             }
         } else {
@@ -109,26 +105,6 @@ int main(int argc, char *argv[])
     } else {
         printf("ERROR: run the program with command line arguments\n");
         return 3;
-    }
-}
-
-/*!
- * Allocates an array of pointers to line
- *
- * @param [in] n_lines array size
- *
- * @return a pointer to an allocated array
- *
- * @note Returns NULL in case of failure
- */
-struct line **allocate_array_of_lines(int n_lines)
-{
-    struct line **lines = NULL;
-    if ((lines = calloc(n_lines, sizeof(struct line *))) != NULL) {
-        return lines;
-    } else {
-        printf("ERROR: calloc returned NULL in allocate_array_of_lines\n");
-        return NULL;
     }
 }
 
@@ -165,7 +141,7 @@ void free_array_of_lines(struct line **lines, int n_lines)
  * @param [in] input pointer to input file
  * @param [out] n_lines number of lines read
  *
- * @return pointer to array of pointers to line
+ * @return pointer to an array of read lines
  *
  * @note Returns NULL in case of failure
  */
@@ -174,101 +150,133 @@ struct line **read_lines_from_file(FILE *input, int *n_lines)
     assert(input != NULL);
     assert(n_lines != NULL);
 
-    *n_lines = count_lines_in_file(input);
-    struct line **lines = NULL;
+    char *buf = NULL;
 
-    if ((lines = allocate_array_of_lines(*n_lines)) != NULL) {
-        int i = 0;
-        for (i = 0; i < *n_lines; ++i) {
-            if ((lines[i] = read_line_from_file(input)) == NULL) {
-                printf("ERROR: read_line_from_file returned NULL in read_lines_from_file\n");
-                return NULL;
-            }
-        }
+    if ((buf = read_file_to_buf(input, n_lines)) != NULL && (*n_lines > 0)) {
+        struct line **lines = NULL;
 
-        return lines;
-    } else {
-        printf("ERROR: allocate_array_of_lines return NULL in read_lines_from_file\n");
-        return NULL;
-    }
-}
+        if ((lines = calloc(*n_lines, sizeof(struct line *))) != NULL) {
+            if ((*lines = calloc(1, sizeof(struct line))) != NULL) {
+                char *tmp = strtok(buf, "\n");
+                (*lines)->len = strlen(tmp);
 
-/*!
- * Reads a line from input and returns it
- *
- * @param [in] input pointer to input file
- *
- * @return Pointer to line
- *
- * @note Returns NULL in case of failure
- */
-struct line *read_line_from_file(FILE *input)
-{
-    assert(input != NULL);
+                if (((*lines)->s = calloc((*lines)->len + 1, sizeof(char))) != NULL) {
+                    strcpy((*lines)->s, tmp);
 
-    if ((buf == NULL) && ((buf = malloc(buf_size * sizeof(char))) == NULL)) {
-        printf("ERROR: malloc returned NULL in read_line_from_file\n");
-        return NULL;
-    } else {
-        int len = read_line_to_buf(input, 0);
+                    int i = 1;
+                    for (i = 1; i < *n_lines; ++i) {
+                        if ((lines[i] = calloc(1, sizeof(struct line))) != NULL) {
+                            if ((tmp = strtok(NULL, "\n")) != NULL) {
+                                lines[i]->len = strlen(tmp);
 
-        if (len >= 0) {
-            struct line *l = calloc(1, sizeof(struct line));
-            l->len = len;
+                                if ((lines[i]->s = calloc(lines[i]->len + 1, sizeof(char))) !=
+                                NULL) {
+                                    strcpy(lines[i]->s, tmp);
+                                } else {
+                                    printf("ERROR: calloc returned NULL in read_lines_from_file\n");
+                                    return NULL;
+                                }
+                            } else {
+                                printf("ERROR: strtok returned NULL unexpectedly in "
+                                       "read_lines_from_file\n");
+                                return NULL;
+                            }
+                        } else {
+                            printf("ERROR: calloc returned NULL in read_lines_from_file\n");
+                            return NULL;
+                        }
+                    }
 
-            if ((l->s = calloc(len + 1, sizeof(char))) != NULL) {
-                strcpy(l->s, buf);
-                return l;
+                    return lines;
+                } else {
+                    printf("ERROR: calloc returned NULL in read_lines_from_file\n");
+                    return NULL;
+                }
             } else {
-                printf("ERROR: calloc returned NULL in read_line_from_file\n");
+                printf("ERROR: calloc returned NULL in read_lines_from_file\n");
                 return NULL;
             }
         } else {
+            printf("ERROR: calloc returned NULL in read_lines_from_file\n");
             return NULL;
         }
+    } else {
+        if (*n_lines != 0) {
+            printf("ERROR: read_file_to_buf returned NULL and n_lines is not equal to zero\n");
+        }
+
+        return NULL;
     }
 }
 
 /*!
- * Reads a line from input and writes it to global buffer buf, discarding '\n', starting from
- * position buf_pos
+ * Reads file input to a char buffer and counts the number of lines in it
  *
- * @param [in] input pointer to input file
- * @param [in] buf_pos position starting from which write to buffer occures
+ * @param [in] input pointer to file
+ * @param [out] n_lines number of lines in input
  *
- * @return length of line read
+ * @return pointer to the char buffer
  *
- * @note Returns 0 in case of failure
+ * @note Returns NULL in case of failure or if the input file was empty
  */
-int read_line_to_buf(FILE *input, int buf_pos)
+char *read_file_to_buf(FILE *input, int *n_lines)
 {
     assert(input != NULL);
-    assert(buf_pos >= 0);
+    assert(n_lines != NULL);
 
-    if (fgets(buf + buf_pos, buf_size - buf_pos, input) != NULL) {
-        size_t len = strlen(buf);
+    int n_chars = count_chars_and_lines_in_file(input, n_lines);
+    char *buf = NULL;
 
-        if (buf[len - 1] == '\n') {
-            buf[--len] = '\0';
-
-            return len;
-        } else {
-            if (feof(input)) {
-                return len;
+    if (n_chars > 0) {
+        if ((buf = calloc(n_chars + 1, sizeof(char))) != NULL) {
+            if (fread(buf, sizeof(char), n_chars, input) == n_chars) {
+                return buf;
             } else {
-                buf_size *= 2;
-
-                if ((buf = realloc(buf, buf_size)) != NULL) {
-                    return read_line_to_buf(input, len);
-                } else {
-                    printf("ERROR: realloc returned NULL in read_line_to_buf\n");
-                    return -1;
-                }
+                printf("ERROR: fread read less chars than expected in read_file_to_buf\n");
+                return NULL;
             }
+        } else {
+            printf("ERROR: calloc returned NULL in read_file_to_buf\n");
+            return NULL;
         }
     } else {
-        return 0;
+        return NULL;
     }
+}
+
+/*!
+ * Counts the number of characters and lines in file input, clears error flags of input and
+ * rewinds it
+ *
+ * @param [in] input pointer to input file
+ *
+ * @return the number of lines
+ */
+int count_chars_and_lines_in_file(FILE *input, int *n_lines)
+{
+    assert(input != NULL);
+    assert(n_lines != NULL);
+
+    int pre_c = EOF, c = 0, n_chars = 0;
+    *n_lines = 0;
+
+    while ((c = fgetc(input)) != EOF) {
+        if ((c == '\n') && (pre_c != '\n') && (pre_c != EOF)) {
+            ++*n_lines;
+        }
+
+        pre_c = c;
+        ++n_chars;
+    }
+
+    if ((pre_c != EOF) && (pre_c != '\n')) {
+        ++*n_lines;
+    }
+
+    clearerr(input);
+    rewind(input);
+
+    return n_chars;
 }
 
 /*!
@@ -285,65 +293,6 @@ int to_lower(int c)
     } else {
         return c;
     }
-}
-
-/*!
- * Counts the number of characters and lines in file input, clears error flags of input and
- * rewinds it
- *
- * @param [in] input pointer to input file
- *
- * @return the number of lines
- */
-int count_lines_in_file(FILE *input)
-{
-    assert(input != NULL);
-
-    int pre_c = EOF, c = 0, counter = 0;
-
-    while ((c = fgetc(input)) != EOF) {
-        if (c == '\n') {
-            ++counter;
-        }
-
-        pre_c = c;
-    }
-
-    if ((pre_c != EOF) && (pre_c != '\n')) {
-        ++counter;
-    }
-
-    clearerr(input);
-    rewind(input);
-
-    return counter;
-}
-
-int count_chars_and_lines_in_file(FILE *input, int *n_lines)
-{
-    assert(input != NULL);
-    assert(n_lines != NULL);
-
-    int pre_c = EOF, c = 0, n_chars = 0;
-    *n_lines = 0;
-
-    while ((c = fgetc(input)) != EOF) {
-        if (c == '\n') {
-            ++*n_lines;
-        }
-
-        pre_c = c;
-        ++n_chars;
-    }
-
-    if ((pre_c != EOF) && (pre_c != '\n')) {
-        ++*n_lines;
-    }
-
-    clearerr(input);
-    rewind(input);
-
-    return n_chars;
 }
 
 /*!
@@ -367,7 +316,7 @@ void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
     assert(n_lines > 0);
 
     struct line **lines_cp = NULL;
-    if ((lines_cp = allocate_array_of_lines(n_lines)) != NULL) {
+    if ((lines_cp = calloc(n_lines, sizeof(struct line *))) != NULL) {
         int i = 0;
         for (i = 0; i < n_lines; ++i) {
             if ((lines_cp[i] = calloc(1, sizeof(struct line))) != NULL) {
@@ -637,16 +586,12 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
         ++s2;
     }
 
-    if ((to_lower(*s1) == to_lower(*s2)) && (*s1 == '\0')) {
+    if ((*s1 == '\0') && (*s2 == '\0')) {
         return 0;
+    } else if ((*s1 != '\0') && (*s2 != '\0')) {
+        return (to_lower(*s1) > to_lower(*s2)) ? 1 : -1;
     } else {
-        if (*s1 == '\0') {
-            return -1;
-        } else if (*s2 == '\0') {
-            return 1;
-        } else {
-            return (tolower(*s1) > tolower(*s2)) ? 1 : -1;
-        }
+        return (*s1 != '\0') ? 1 : -1;
     }
 }
 
@@ -663,54 +608,40 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
 int line_ptr_cmp_reverse(const void *arg1, const void *arg2)
 {
     const struct line *const *l1 = arg1, *const *l2 = arg2;
-    const char *s1 = (*l1)->s + (((*l1)->len > 0) ? (*l1)->len : 1) - 1;
-    const char *s2 = (*l2)->s + (((*l2)->len > 0) ? (*l2)->len : 1) - 1;
+    const char *s1 = (*l1)->s, *s2 = (*l2)->s;
+    int i1 = (*l1)->len - 1, i2 = (*l2)->len - 1;
 
-    while (s1 != (*l1)->s && s2 != (*l2)->s) {
-        if (to_lower(*s1) == to_lower(*s2)) {
-            --s1;
-            --s2;
+    while ((i1 >= 0) && (i2 >= 0)) {
+        if (to_lower(s1[i1]) == to_lower(s2[i2])) {
+            --i1;
+            --i2;
         } else {
-            if (IS_ALPHA(*s1) && IS_ALPHA(*s2)) {
+            if (IS_ALPHA(s1[i1]) && IS_ALPHA(s2[i2])) {
                 break;
             }
 
-            if (!IS_ALPHA(*s1)) {
-                --s1;
+            if (!IS_ALPHA(s1[i1])) {
+                --i1;
             }
 
-            if (!IS_ALPHA(*s2)) {
-                --s2;
+            if (!IS_ALPHA(s2[i2])) {
+                --i2;
             }
         }
     }
 
-    while ((s1 != (*l1)->s) && !IS_ALPHA(*s1)) {
-        --s1;
+    while ((i1 >= 0) && !IS_ALPHA(s1[i1])) {
+        --i1;
     }
-    while ((s2 != (*l2)->s) && !IS_ALPHA(*s2)) {
-        --s2;
+    while ((i2 >= 0) && !IS_ALPHA(s2[i2])) {
+        --i2;
     }
 
-    if ((s1 == (*l1)->s) == (s2 == (*l2)->s)) {
-        if (IS_ALPHA(*s1) && IS_ALPHA(*s2)) {
-            if (to_lower(*s1) == to_lower(*s2)) {
-                return 0;
-            } else {
-                return (tolower(*s1) > tolower(*s2)) ? 1 : -1;
-            }
-        } else if (!IS_ALPHA(*s1) && !IS_ALPHA(*s2)) {
-            return 0;
-        } else if (!IS_ALPHA(*s1)) {
-            return -1;
-        } else {
-            return 1;
-        }
+    if ((i1 == -1) && (i2 == -1)) {
+        return 0;
+    } else if ((i1 != -1) && (i2 != -1)) {
+        return (to_lower(s1[i1]) > to_lower(s2[i2])) ? 1 : -1;
     } else {
-        if (s1 == (*l1)->s) {
-            return -1;
-        } else {
-            return 1;
-        }
+        return (i1 != -1) ? 1 : -1;
     }
 }
