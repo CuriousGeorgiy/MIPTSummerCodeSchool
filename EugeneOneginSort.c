@@ -609,7 +609,7 @@ int line_ptr_cmp_reverse(const void *arg1, const void *arg2)
 {
     const struct line *const *l1 = arg1, *const *l2 = arg2;
     const char *s1 = (*l1)->s, *s2 = (*l2)->s;
-    int i1 = (*l1)->len - 1, i2 = (*l2)->len - 1;
+    int i1 = (((*l1)->len > 0) ? (*l1)->len : 1) - 1, i2 = (((*l2)->len > 0) ? (*l2)->len : 1) - 1;
 
     while ((i1 >= 0) && (i2 >= 0)) {
         if (to_lower(s1[i1]) == to_lower(s2[i2])) {
