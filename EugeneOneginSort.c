@@ -29,22 +29,23 @@ void free_array_of_lines(struct line **lines, int n_lines);
 
 struct line **read_lines_from_file(FILE *input, int *n_lines);
 int count_lines_in_file(FILE *input);
+int count_chars_and_lines_in_file(FILE *input, int *n_lines);
 struct line *read_line_from_file(FILE *input);
 int read_line_to_buf(FILE *input, int buf_pos);
 
 void to_lower_line(struct line *l);
 
 void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                int (*line_cmp)(const void *l1, const void *l2),
+                                int (*line_cmp)(const void *, const void *),
                                 char *file_name);
 
 void tree_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                   int (*line_cmp)(const void *l1, const void *l2),
+                                   int (*line_cmp)(const void *, const void *),
                                    char *file_name);
 struct node *generate_bst(const struct line *const *lines, int n_lines,
-                          int (*line_cmp)(const void *l1, const void *l2));
+                          int (*line_cmp)(const void *, const void *));
 struct node *insert_node_into_bst(struct node *parent, const struct line *l,
-                                  int (*line_cmp)(const void *l1, const void *l2));
+                                  int (*line_cmp)(const void *, const void *));
 void write_bst_to_file(const struct node *current, FILE *output);
 void delete_bst(struct node *current);
 
@@ -67,7 +68,7 @@ int main(int argc, char *argv[])
             if ((strcmp(argv[2], "--r") == 0)) {
                 sort_mode = argv[2][2];
             } else {
-                printf("ERROR: invalid optional third command line argument (must be \'--r\')\n");
+                printf("ERROR: invalid optional command line argument (must be \'--r\')\n");
                 return 3;
             }
         }
@@ -83,8 +84,9 @@ int main(int argc, char *argv[])
 
                 if (n_lines > 0) {
                     tree_sort_with_output_to_file(lines, n_lines,
-                                                  (sort_mode == 'd') ? line_ptr_cmp_direct :
-                                                  line_ptr_cmp_reverse, output_file_name);
+                                               (sort_mode == 'd') ? line_ptr_cmp_direct
+                                                                  : line_ptr_cmp_reverse,
+                                               output_file_name);
                     free_array_of_lines(lines, n_lines);
                 } else {
                     printf("Input file was empty, so output file wasn't created\n");
@@ -286,7 +288,8 @@ int to_lower(int c)
 }
 
 /*!
- * Counts the number of lines in file input, clears error flags of input and rewinds it
+ * Counts the number of characters and lines in file input, clears error flags of input and
+ * rewinds it
  *
  * @param [in] input pointer to input file
  *
@@ -316,6 +319,33 @@ int count_lines_in_file(FILE *input)
     return counter;
 }
 
+int count_chars_and_lines_in_file(FILE *input, int *n_lines)
+{
+    assert(input != NULL);
+    assert(n_lines != NULL);
+
+    int pre_c = EOF, c = 0, n_chars = 0;
+    *n_lines = 0;
+
+    while ((c = fgetc(input)) != EOF) {
+        if (c == '\n') {
+            ++*n_lines;
+        }
+
+        pre_c = c;
+        ++n_chars;
+    }
+
+    if ((pre_c != EOF) && (pre_c != '\n')) {
+        ++*n_lines;
+    }
+
+    clearerr(input);
+    rewind(input);
+
+    return n_chars;
+}
+
 /*!
  * Sorts lines using quick sort algorithm and writes the sorted lines to file_name
  *
@@ -327,7 +357,7 @@ int count_lines_in_file(FILE *input)
  * @note Filename is opened in "w" mode
  */
 void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                int (*line_cmp)(const void *l1, const void *l2),
+                                int (*line_cmp)(const void *, const void *),
                                 char *file_name)
 {
     assert(lines != NULL);
@@ -340,7 +370,19 @@ void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
     if ((lines_cp = allocate_array_of_lines(n_lines)) != NULL) {
         int i = 0;
         for (i = 0; i < n_lines; ++i) {
-            memcpy(lines_cp[i], lines[i], sizeof(struct line));
+            if ((lines_cp[i] = calloc(1, sizeof(struct line))) != NULL) {
+                lines_cp[i]->len = lines[i]->len;
+
+                if ((lines_cp[i]->s = calloc(lines_cp[i]->len + 1, sizeof(char))) != NULL) {
+                    strcpy(lines_cp[i]->s, lines[i]->s);
+                } else {
+                    printf("ERROR: calloc returned NULL in q_sort_with_output_to_file\n");
+                    return;
+                }
+            } else {
+                printf("ERROR: calloc returned NULL in q_sort_with_output_to_file\n");
+                return;
+            }
         }
 
         qsort(lines_cp, n_lines, sizeof(struct line *), line_cmp);
@@ -374,7 +416,7 @@ void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
  * @note Filename is opened in "w" mode
  */
 void tree_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                   int (*line_cmp)(const void *l1, const void *l2),
+                                   int (*line_cmp)(const void *, const void *),
                                    char *file_name)
 {
     assert(lines != NULL);
@@ -412,7 +454,7 @@ void tree_sort_with_output_to_file(const struct line *const *lines, int n_lines,
  * @note Returns NULL in case of failure
  */
 struct node *generate_bst(const struct line *const *lines, int n_lines,
-                          int (*line_cmp)(const void *l1, const void *l2))
+                          int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
     assert(line_cmp != NULL);
@@ -458,7 +500,7 @@ struct node *generate_bst(const struct line *const *lines, int n_lines,
  * @note Returns NULL in case of failure
  */
 struct node *insert_node_into_bst(struct node *parent, const struct line *l,
-                                  int (*line_cmp)(const void *l1, const void *l2))
+                                  int (*line_cmp)(const void *, const void *))
 {
     assert(parent != NULL);
     assert(l != NULL);
@@ -566,7 +608,7 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
     assert(arg1 != NULL);
     assert(arg2 != NULL);
 
-    const struct line * const *l1 = arg1, * const *l2 = arg2;
+    const struct line *const *l1 = arg1, *const *l2 = arg2;
     const char *s1 = (*l1)->s, *s2 = (*l2)->s;
 
     while (*s1 != '\0' && *s2 != '\0') {
@@ -620,8 +662,9 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
  */
 int line_ptr_cmp_reverse(const void *arg1, const void *arg2)
 {
-    const struct line * const *l1 = arg1, * const *l2 = arg2;
-    const char *s1 = (*l1)->s + (*l1)->len - 1, *s2 = (*l2)->s + (*l2)->len - 1;
+    const struct line *const *l1 = arg1, *const *l2 = arg2;
+    const char *s1 = (*l1)->s + (((*l1)->len > 0) ? (*l1)->len : 1) - 1;
+    const char *s2 = (*l2)->s + (((*l2)->len > 0) ? (*l2)->len : 1) - 1;
 
     while (s1 != (*l1)->s && s2 != (*l2)->s) {
         if (to_lower(*s1) == to_lower(*s2)) {
