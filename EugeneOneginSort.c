@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define IS_ALPHA(c) (('A' <= (c)) && ((c) <= 'Z') || ('a' <= (c)) && ((c) <= 'z'))
-
 /*!
  * Data structure for text lines. Contains a pointer to a null-terminated string and its length
  */
@@ -32,19 +30,21 @@ int count_chars_and_lines_in_file(FILE *input, int *n_lines);
 char *read_file_to_buf(FILE *input, int *n_lines);
 
 void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                int (*line_cmp)(const void *, const void *),
+                                int (*line_ptr_cmp)(const void *, const void *),
                                 char *file_name);
 
 void tree_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                   int (*line_cmp)(const void *, const void *),
+                                   int (*line_ptr_cmp)(const void *, const void *),
                                    char *file_name);
 struct node *generate_bst(const struct line *const *lines, int n_lines,
-                          int (*line_cmp)(const void *, const void *));
+                          int (*line_ptr_cmp)(const void *, const void *));
 struct node *insert_node_into_bst(struct node *parent, const struct line *l,
-                                  int (*line_cmp)(const void *, const void *));
+                                  int (*line_ptr_cmp)(const void *, const void *));
 void write_bst_to_file(const struct node *current, FILE *output);
 void delete_bst(struct node *current);
 
+int to_lower(int c);
+int is_alpha(int c);
 int line_ptr_cmp_direct(const void *arg1, const void *arg2);
 int line_ptr_cmp_reverse(const void *arg1, const void *arg2);
 
@@ -288,7 +288,7 @@ int count_chars_and_lines_in_file(FILE *input, int *n_lines)
  */
 int to_lower(int c)
 {
-    if (IS_ALPHA(c)) {
+    if (is_alpha(c)) {
         return tolower(c);
     } else {
         return c;
@@ -300,17 +300,17 @@ int to_lower(int c)
  *
  * @param [in] lines pointer to array of pointer to line
  * @param [in] n_lines array size
- * @param [in] line_cmp pointer to pointer to line comparator function
+ * @param [in] line_ptr_cmp pointer to line comparator function
  * @param [in] file_name name of file to which the result of sorting is written
  *
  * @note Filename is opened in "w" mode
  */
 void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                int (*line_cmp)(const void *, const void *),
+                                int (*line_ptr_cmp)(const void *, const void *),
                                 char *file_name)
 {
     assert(lines != NULL);
-    assert(line_cmp != NULL);
+    assert(line_ptr_cmp != NULL);
     assert(file_name != NULL);
 
     assert(n_lines > 0);
@@ -334,7 +334,7 @@ void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
             }
         }
 
-        qsort(lines_cp, n_lines, sizeof(struct line *), line_cmp);
+        qsort(lines_cp, n_lines, sizeof(struct line *), line_ptr_cmp);
 
         FILE *f = NULL;
 
@@ -359,23 +359,23 @@ void q_sort_with_output_to_file(const struct line *const *lines, int n_lines,
  *
  * @param [in] lines pointer to array of pointers to line
  * @param [in] n_lines array size
- * @param [in] line_cmp pointer to pointer to line comparator function
+ * @param [in] line_ptr_cmp pointer to line comparator function
  * @param [in] file_name name of file to which the result of sorting is written
  *
  * @note Filename is opened in "w" mode
  */
 void tree_sort_with_output_to_file(const struct line *const *lines, int n_lines,
-                                   int (*line_cmp)(const void *, const void *),
+                                   int (*line_ptr_cmp)(const void *, const void *),
                                    char *file_name)
 {
     assert(lines != NULL);
-    assert(line_cmp != NULL);
+    assert(line_ptr_cmp != NULL);
     assert(file_name != NULL);
 
     assert(n_lines > 0);
 
     struct node *root = NULL;
-    if ((root = generate_bst(lines, n_lines, line_cmp)) != NULL) {
+    if ((root = generate_bst(lines, n_lines, line_ptr_cmp)) != NULL) {
         FILE *f = NULL;
 
         if ((f = fopen(file_name, "w")) != NULL) {
@@ -396,17 +396,17 @@ void tree_sort_with_output_to_file(const struct line *const *lines, int n_lines,
  *
  * @param [in] lines pointer to array of pointers to line
  * @param [in] n_lines array size
- * @param [in] line_cmp pointer to pointer to line comparator function
+ * @param [in] line_ptr_cmp pointer to line comparator function
  *
  * @return Pointer to root node
  *
  * @note Returns NULL in case of failure
  */
 struct node *generate_bst(const struct line *const *lines, int n_lines,
-                          int (*line_cmp)(const void *, const void *))
+                          int (*line_ptr_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
-    assert(line_cmp != NULL);
+    assert(line_ptr_cmp != NULL);
 
     assert(n_lines > 0);
 
@@ -420,7 +420,7 @@ struct node *generate_bst(const struct line *const *lines, int n_lines,
 
             int i = 1;
             for (i = 1; i < n_lines; ++i) {
-                if (insert_node_into_bst(root, lines[i], line_cmp) == NULL) {
+                if (insert_node_into_bst(root, lines[i], line_ptr_cmp) == NULL) {
                     printf("ERROR: insert_node_into_bst returned NULL in generate_bst");
                     return NULL;
                 }
@@ -442,20 +442,20 @@ struct node *generate_bst(const struct line *const *lines, int n_lines,
  *
  * @param [in, out] parent pointer to parent node
  * @param [in] l pointer to line
- * @param [in] line_cmp pointer to pointer to line comparator function
+ * @param [in] line_ptr_cmp to pointer to line comparator function
  *
  * @return Pointer to inserted node
  *
  * @note Returns NULL in case of failure
  */
 struct node *insert_node_into_bst(struct node *parent, const struct line *l,
-                                  int (*line_cmp)(const void *, const void *))
+                                  int (*line_ptr_cmp)(const void *, const void *))
 {
     assert(parent != NULL);
     assert(l != NULL);
-    assert(line_cmp != NULL);
+    assert(line_ptr_cmp != NULL);
 
-    if ((*line_cmp)(&parent->l, &l) >= 0) {
+    if ((*line_ptr_cmp)(&parent->l, &l) >= 0) {
         if (parent->left == NULL) {
             if ((parent->left = calloc(1, sizeof(struct node))) != NULL) {
                 if ((parent->left->l = calloc(1, sizeof(struct line))) != NULL) {
@@ -473,7 +473,7 @@ struct node *insert_node_into_bst(struct node *parent, const struct line *l,
                 return NULL;
             }
         } else {
-            return insert_node_into_bst(parent->left, l, line_cmp);
+            return insert_node_into_bst(parent->left, l, line_ptr_cmp);
         }
     } else {
         if (parent->right == NULL) {
@@ -493,7 +493,7 @@ struct node *insert_node_into_bst(struct node *parent, const struct line *l,
                 return NULL;
             }
         } else {
-            return insert_node_into_bst(parent->right, l, line_cmp);
+            return insert_node_into_bst(parent->right, l, line_ptr_cmp);
         }
     }
 }
@@ -542,6 +542,11 @@ void delete_bst(struct node *current)
     free(current);
 }
 
+int is_alpha(int c)
+{
+    return ('A' <= (c)) && ((c) <= 'Z') || ('a' <= (c)) && ((c) <= 'z');
+}
+
 /*!
  * Direct pointer to line comparator function. Compares line->s of two pointers to
  * line, discarding non-alpha characters (in terms of this their length is equal to the number of
@@ -565,24 +570,24 @@ int line_ptr_cmp_direct(const void *arg1, const void *arg2)
             ++s1;
             ++s2;
         } else {
-            if (IS_ALPHA(*s1) && IS_ALPHA(*s2)) {
+            if (is_alpha(*s1) && is_alpha(*s2)) {
                 break;
             }
 
-            if (!IS_ALPHA(*s1)) {
+            if (!is_alpha(*s1)) {
                 ++s1;
             }
 
-            if (!IS_ALPHA(*s2)) {
+            if (!is_alpha(*s2)) {
                 ++s2;
             }
         }
     }
 
-    while ((*s1 != '\0') && !IS_ALPHA(*s1)) {
+    while ((*s1 != '\0') && !is_alpha(*s1)) {
         ++s1;
     }
-    while ((*s2 != '\0') && !IS_ALPHA(*s2)) {
+    while ((*s2 != '\0') && !is_alpha(*s2)) {
         ++s2;
     }
 
@@ -616,24 +621,24 @@ int line_ptr_cmp_reverse(const void *arg1, const void *arg2)
             --i1;
             --i2;
         } else {
-            if (IS_ALPHA(s1[i1]) && IS_ALPHA(s2[i2])) {
+            if (is_alpha(s1[i1]) && is_alpha(s2[i2])) {
                 break;
             }
 
-            if (!IS_ALPHA(s1[i1])) {
+            if (!is_alpha(s1[i1])) {
                 --i1;
             }
 
-            if (!IS_ALPHA(s2[i2])) {
+            if (!is_alpha(s2[i2])) {
                 --i2;
             }
         }
     }
 
-    while ((i1 >= 0) && !IS_ALPHA(s1[i1])) {
+    while ((i1 >= 0) && !is_alpha(s1[i1])) {
         --i1;
     }
-    while ((i2 >= 0) && !IS_ALPHA(s2[i2])) {
+    while ((i2 >= 0) && !is_alpha(s2[i2])) {
         --i2;
     }
 
