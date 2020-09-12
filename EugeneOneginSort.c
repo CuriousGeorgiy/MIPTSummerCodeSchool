@@ -43,8 +43,8 @@ struct node *insert_node_into_bst(struct node *parent, const struct line *l,
 void write_bst_to_file(const struct node *current, FILE *output);
 void delete_bst(struct node *current);
 
-int to_lower(int c);
 int is_alpha(int c);
+int to_lower(int c);
 int line_ptr_cmp_direct(const void *arg1, const void *arg2);
 int line_ptr_cmp_reverse(const void *arg1, const void *arg2);
 
@@ -277,22 +277,6 @@ int count_chars_and_lines_in_file(FILE *input, int *n_lines)
     rewind(input);
 
     return n_chars;
-}
-
-/*!
- * Converts an alpha to lower
- *
- * @param [in] c character
- *
- * @return Lowercase version of c or unmodified c, if it's not an alpha
- */
-int to_lower(int c)
-{
-    if (is_alpha(c)) {
-        return tolower(c);
-    } else {
-        return c;
-    }
 }
 
 /*!
@@ -542,9 +526,32 @@ void delete_bst(struct node *current)
     free(current);
 }
 
+/*!
+ *  Checks if c is an alpha
+ *
+ * @param [in] c
+ *
+ * @return 1 if c is an alpha, 0 otherwise
+ */
 int is_alpha(int c)
 {
     return ('A' <= (c)) && ((c) <= 'Z') || ('a' <= (c)) && ((c) <= 'z');
+}
+
+/*!
+ * Converts an alpha to lower
+ *
+ * @param [in] c character
+ *
+ * @return Lowercase version of c or unmodified c, if it's not an alpha
+ */
+int to_lower(int c)
+{
+    if (is_alpha(c)) {
+        return tolower(c);
+    } else {
+        return c;
+    }
 }
 
 /*!
