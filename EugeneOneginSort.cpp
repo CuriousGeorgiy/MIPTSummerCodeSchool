@@ -1,3 +1,7 @@
+#ifndef _WIN32
+#error This program must be compiled under Windows
+#endif
+
 #define _CRT_SECURE_NO_WARNINGS
 
 #include <assert.h>
@@ -6,10 +10,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <Windows.h>
+
 /*!
  * Global char buffer for reading text file into
  */
 static char* BUFFER = NULL;
+
+
 
 /*!
  * Data structure defining the node of a binary search tree. Contains a pointer
@@ -224,6 +232,77 @@ int read_file_to_buffer(const char* file_name)
     }
 }
 
+int read_file_to_buffer_using_memory_mapping(const char* file_name)
+{
+    assert(file_name != NULL);
+
+    HANDLE input_file_handle = NULL;
+
+    if ((input_file_handle = CreateFileA(file_name, GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL)) != INVALID_HANDLE_VALUE) {
+        DWORD n_chars = GetFileSize(input_file_handle, NULL);
+
+        if (n_chars > 0) {
+            HANDLE input_file_mapping_handle = NULL;
+
+            if ((input_file_mapping_handle = CreateFileMappingA(input_file_handle, NULL, PAGE_READONLY, 0, 0, NULL)) != NULL) {
+                LPVOID input_file_map_view = NULL;
+
+                if ((input_file_map_view = MapViewOfFile(input_file_mapping_handle, FILE_MAP_READ, 0, 0, 0)) != NULL) {
+                    if ((BUFFER = (char*)calloc(n_chars + 2ul, sizeof(char))) != NULL) {
+                        CopyMemory(BUFFER + 1, input_file_map_view, n_chars);
+
+                        int error_flag = 0;
+
+                        if ((error_flag = UnmapViewOfFile(input_file_map_view)) == 0) {
+                            printf("ERROR: UnmapViewOfFile returned a zero in read_file_to_buffer\n");
+                        }
+
+                        if ((error_flag = CloseHandle(input_file_mapping_handle)) == 0) {
+                            printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                        }
+
+                        if ((error_flag = CloseHandle(input_file_handle)) == 0) {
+                            printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                        }
+
+                        return error_flag;
+                    } else {
+                        printf("ERROR: calloc returned NULL in read_file_to_buffer\n");
+
+                        return -1;
+                    }
+                } else {
+                    printf("ERROR: MapViewOfFile returned NULL in read_file_to_buffer\n");
+
+                    if (CloseHandle(input_file_mapping_handle) == 0) {
+                        printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                    }
+
+                    if (CloseHandle(input_file_handle) == 0) {
+                        printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                    }
+
+                    return -1;
+                }
+            } else {
+                printf("ERROR: CreateFileMappingA returned NULL in read_file_to_buffer\n");
+
+                if (CloseHandle(input_file_handle) == 0) {
+                    printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                }
+
+                return -1;
+            }
+        } else {
+            return 1;
+        }
+    } else {
+        printf("ERROR: invalid file name passed to CreateFileA in read_file_to_buffer\n");
+
+        return -1;
+    }
+}
+
 /*!
  * Counts the number of lines in global buffer BUFFER. After finishing, clears
  * error flags of input and rewinds it
@@ -253,8 +332,6 @@ int count_lines_in_buffer(void)
 
     return n_lines;
 }
-
-void write_line_to_file(const char* line) { }
 
 /*!
  * Sorts lines using the quick sort algorithm and writes the sorted lines to
