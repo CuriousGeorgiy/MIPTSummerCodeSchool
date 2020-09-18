@@ -15,51 +15,48 @@
 /*!
  * Global char buffer for reading text file into
  */
-static char* BUFFER = NULL;
+static char *BUFFER = NULL;
 
-
+/*!
+ * Constant for defining the output file name of the program
+ */
+static const char *OUTPUT_FILE_NAME = "output.txt";
 
 /*!
  * Data structure defining the node of a binary search tree. Contains a pointer
  * to line of chars and two pointers to child nodes
  */
 struct node {
-    const char* line;
-    struct node* left;
-    struct node* right;
+    const char *line;
+    struct node *left;
+    struct node *right;
 };
 
-char** read_lines_from_file(const char* file_name, int* n_lines);
+int eugene_onegin_sort(const char *input_file_name, char sort_mode);
+
+char **read_lines_from_file(const char *file_name, int *n_lines);
 int count_lines_in_buffer();
-int read_file_to_buffer(const char* file_name);
+int read_file_to_buffer(const char *file_name);
 
-void q_sort_with_output_to_file(char** lines,
-    int n_lines,
-    int (*line_cmp)(const void*, const void*),
-    const char* file_name);
-void write_lines_to_file(const char* const* lines,
-    int n_lines,
-    const char* file_name);
+void q_sort_with_output_to_file(char **lines, int n_lines,
+                                int (*line_cmp)(const void *, const void *));
+void write_lines_to_file(const char *const *lines, int n_lines);
 
-void tree_sort_with_output_to_file(const char* const* lines,
-    int n_lines,
-    int (*line_cmp)(const void*, const void*),
-    const char* file_name);
-struct node* generate_bst(const char* const* lines,
-    int n_lines,
-    int (*line_cmp)(const void*, const void*));
-struct node* insert_node_into_bst(struct node* parent,
-    const char* line,
-    int (*line_cmp)(const void*, const void*));
-void write_bst_to_file(const struct node* current, const char* file_name);
-void delete_bst(struct node* current);
+void tree_sort_with_output_to_file(const char *const *lines, int n_lines,
+                                   int (*line_cmp)(const void *, const void *));
+struct node *generate_bst(const char *const *lines, int n_lines,
+                          int (*line_cmp)(const void *, const void *));
+struct node *insert_node_into_bst(struct node *parent, const char *line,
+                                  int (*line_cmp)(const void *, const void *));
+void write_bst_to_file(const struct node *current);
+void delete_bst(struct node *current);
 
 int is_alpha(int c);
 int to_lower(int c);
-int line_cmp_direct(const void* arg1, const void* arg2);
-int line_cmp_reversed(const void* arg1, const void* arg2);
+int line_cmp_direct(const void *arg1, const void *arg2);
+int line_cmp_reversed(const void *arg1, const void *arg2);
 
-int main(int argc, const char* argv[])
+int main(int argc, const char *argv[])
 {
     printf(
         "Eugene Onegin sort\n\n"
@@ -72,7 +69,7 @@ int main(int argc, const char* argv[])
         "argument \"-reversed\" (\"--r\"))\n\n");
 
     if (argc >= 2 && argc <= 3) {
-        const char *input_file_name = argv[1], *output_file_name = "output.txt";
+        const char *input_file_name = argv[1];
         char sort_mode = 'd';
 
         if (argc == 3) {
@@ -83,28 +80,13 @@ int main(int argc, const char* argv[])
                     "ERROR: invalid optional command line argument (must be "
                     "\"-reversed\""
                     "or \"--r\")\n");
-                return EXIT_FAILURE;
             }
         }
 
-        int n_lines = 0;
-        char** lines = NULL;
-
-        if (((lines = read_lines_from_file(input_file_name, &n_lines)) != NULL) || (n_lines == 0)) {
-            if (n_lines > 0) {
-                q_sort_with_output_to_file(
-                    lines, n_lines,
-                    (sort_mode == 'd') ? line_cmp_direct : line_cmp_reversed,
-                    output_file_name);
-
-                free(BUFFER);
-            } else {
-                printf("Input file was empty, so output file wasn't created\n");
-            }
-
+        if (!eugene_onegin_sort(input_file_name, sort_mode)) {
             return EXIT_SUCCESS;
         } else {
-            printf("ERROR: get_lines_from_file returned NULL in main\n");
+            printf("ERROR: eugene_onegin_sort returned a non-zero value in main\n");
 
             return EXIT_FAILURE;
         }
@@ -126,6 +108,45 @@ int main(int argc, const char* argv[])
 }
 
 /*!
+ * Poem lines from input file will be sorted and written to the output file. The
+ * order
+ * in which 2 lines are processed during comparison is direct (default) or reversed, which is
+ * defined by the sort mode
+ *
+ * @param [in] input_file_name pointer to string containing the input file name
+ * @param [in] sort_mode char which set the sort mode ('d' or 'r')
+ *
+ * @return 0 in case of success, non-zero value otherwise
+ *
+ * @note The output file name is OUTPUT_FILE_NAME
+ */
+int eugene_onegin_sort(const char *input_file_name, char sort_mode)
+{
+    int n_lines = 0;
+    char **lines = NULL;
+
+    if (((lines = read_lines_from_file(input_file_name, &n_lines)) != NULL) || (n_lines == 0)) {
+        if (n_lines > 0) {
+            tree_sort_with_output_to_file(lines, n_lines,
+                                       (sort_mode == 'd') ? line_cmp_direct : line_cmp_reversed);
+        } else {
+            printf("Input file was empty, so output file wasn't created\n");
+        }
+
+        free(BUFFER);
+
+        return 0;
+    } else {
+        free(BUFFER);
+
+        printf("ERROR: read_lines_from_file returned NULL in eugene_onegin_sort and n_lines != "
+               "0\n");
+
+        return -1;
+    }
+}
+
+/*!
  * Reads lines from file input and returns an array containing them
  *
  * @param [in] input pointer to input file
@@ -137,17 +158,18 @@ int main(int argc, const char* argv[])
  *
  * @warning Utilizes global char buffer BUFFER. BUFFER must be freed by caller
  */
-char** read_lines_from_file(const char* file_name, int* n_lines)
+char **read_lines_from_file(const char *file_name, int *n_lines)
 {
     assert(file_name != NULL);
     assert(n_lines != NULL);
 
     int error_code = 0;
 
-    if (!(error_code = read_file_to_buffer(file_name)) && ((*n_lines = count_lines_in_buffer()) > 0)) {
-        char** lines = NULL;
+    if (!(error_code = read_file_to_buffer(file_name)) &&
+        ((*n_lines = count_lines_in_buffer()) > 0)) {
+        char **lines = NULL;
 
-        if ((lines = (char**)calloc(*n_lines, sizeof(char*))) != NULL) {
+        if ((lines = (char **) calloc(*n_lines, sizeof(*lines))) != NULL) {
             lines[0] = strtok(BUFFER + 1, "\n");
             lines[0][-1] = '\0';
 
@@ -185,87 +207,50 @@ char** read_lines_from_file(const char* file_name, int* n_lines)
  * @note Returns -1 in case of failure, 1 if the input file was empty. Puts '\0'
  * in the beginning of the buffer (for the purpose of dividing strings by '\0')
  */
-int read_file_to_buffer(const char* file_name)
-{
-    assert(file_name != NULL);
-
-    FILE* input = NULL;
-
-    if ((input = fopen(file_name, "r")) != NULL) {
-        fseek(input, 0, SEEK_END);
-        long n_chars = ftell(input);
-        rewind(input);
-
-        if (n_chars > 0) {
-            if ((BUFFER = (char*)calloc(n_chars + 2l, sizeof(char))) != NULL) {
-                if (fread(BUFFER + 1, sizeof(char), n_chars, input) == n_chars) {
-                    if (fclose(input) != 0) {
-                        printf("ERROR: fclose returned non-zero value\n");
-
-                        return -1;
-                    } else {
-                        return 0;
-                    }
-                } else {
-                    if (fclose(input) != 0) {
-                        printf("ERROR: fclose returned non-zero value\n");
-                    }
-
-                    printf(
-                        "ERROR: fread read less chars than expected in "
-                        "read_file_to_buf\n");
-
-                    return -1;
-                }
-            } else {
-                printf("ERROR: calloc returned NULL in read_file_to_buf\n");
-
-                return -1;
-            }
-        } else {
-            return 1;
-        }
-    } else {
-        printf("ERROR: invalid file name passed to fopen\n");
-
-        return -1;
-    }
-}
-
-int read_file_to_buffer_using_memory_mapping(const char* file_name)
+int read_file_to_buffer(const char *file_name)
 {
     assert(file_name != NULL);
 
     HANDLE input_file_handle = NULL;
 
-    if ((input_file_handle = CreateFileA(file_name, GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL)) != INVALID_HANDLE_VALUE) {
+    if ((input_file_handle =
+             CreateFileA(file_name, GENERIC_READ, 0, NULL, OPEN_EXISTING, NULL, NULL))
+        != INVALID_HANDLE_VALUE) {
         DWORD n_chars = GetFileSize(input_file_handle, NULL);
 
         if (n_chars > 0) {
             HANDLE input_file_mapping_handle = NULL;
 
-            if ((input_file_mapping_handle = CreateFileMappingA(input_file_handle, NULL, PAGE_READONLY, 0, 0, NULL)) != NULL) {
+            if ((input_file_mapping_handle
+                     =
+                     CreateFileMappingA(input_file_handle, NULL, PAGE_READONLY, 0, 0, NULL)) !=
+                NULL) {
                 LPVOID input_file_map_view = NULL;
 
-                if ((input_file_map_view = MapViewOfFile(input_file_mapping_handle, FILE_MAP_READ, 0, 0, 0)) != NULL) {
-                    if ((BUFFER = (char*)calloc(n_chars + 2ul, sizeof(char))) != NULL) {
+                if ((input_file_map_view =
+                         MapViewOfFile(input_file_mapping_handle, FILE_MAP_READ, 0, 0, 0))
+                    != NULL) {
+                    if ((BUFFER = (char *) calloc(n_chars + 2ul, sizeof(*BUFFER))) != NULL) {
                         CopyMemory(BUFFER + 1, input_file_map_view, n_chars);
 
                         int error_flag = 0;
 
                         if ((error_flag = UnmapViewOfFile(input_file_map_view)) == 0) {
-                            printf("ERROR: UnmapViewOfFile returned a zero in read_file_to_buffer\n");
+                            printf(
+                                "ERROR: UnmapViewOfFile returned a zero in read_file_to_buffer\n");
                         }
 
                         if ((error_flag = CloseHandle(input_file_mapping_handle)) == 0) {
-                            printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                            printf(
+                                "ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
                         }
 
                         if ((error_flag = CloseHandle(input_file_handle)) == 0) {
-                            printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                            printf(
+                                "ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
                         }
 
-                        return error_flag;
+                        return !error_flag;
                     } else {
                         printf("ERROR: calloc returned NULL in read_file_to_buffer\n");
 
@@ -275,11 +260,13 @@ int read_file_to_buffer_using_memory_mapping(const char* file_name)
                     printf("ERROR: MapViewOfFile returned NULL in read_file_to_buffer\n");
 
                     if (CloseHandle(input_file_mapping_handle) == 0) {
-                        printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                        printf(
+                            "ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
                     }
 
                     if (CloseHandle(input_file_handle) == 0) {
-                        printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                        printf(
+                            "ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
                     }
 
                     return -1;
@@ -288,7 +275,8 @@ int read_file_to_buffer_using_memory_mapping(const char* file_name)
                 printf("ERROR: CreateFileMappingA returned NULL in read_file_to_buffer\n");
 
                 if (CloseHandle(input_file_handle) == 0) {
-                    printf("ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
+                    printf(
+                        "ERROR: CloseHandle returned zero in read_file_to_buffer on closing input file mapping handle\n");
                 }
 
                 return -1;
@@ -311,12 +299,12 @@ int read_file_to_buffer_using_memory_mapping(const char* file_name)
  *
  * @return the number of lines
  */
-int count_lines_in_buffer(void)
+int count_lines_in_buffer()
 {
     assert(BUFFER != NULL);
 
     int pre_c = EOF, n_lines = 0;
-    const char* reader = BUFFER + 1;
+    const char *reader = BUFFER + 1;
 
     while (*reader) {
         if ((*reader == '\n') && (pre_c != '\n') && (pre_c != EOF)) {
@@ -334,58 +322,53 @@ int count_lines_in_buffer(void)
 }
 
 /*!
- * Sorts lines using the quick sort algorithm and writes the sorted lines to
- * file_name
+ * Sorts lines using the quick sort algorithm and writes the sorted lines to the output file
  *
  * @param [in] lines pointer to an array of lines
  * @param [in] n_lines array size
  * @param [in] line_cmp pointer to line comparator function
- * @param [in] file_name name of file to which the result of sorting is written
  *
- * @note Filename is opened in "w" mode
+ * @note The output file name is OUTPUT_FILE_NAME
  */
-void q_sort_with_output_to_file(char** lines,
-    int n_lines,
-    int (*line_cmp)(const void*, const void*),
-    const char* file_name)
+void q_sort_with_output_to_file(char **lines, int n_lines,
+                                int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
     assert(line_cmp != NULL);
-    assert(file_name != NULL);
 
     assert(n_lines > 0);
 
-    qsort(lines, n_lines, sizeof(struct line*), line_cmp);
+    qsort(lines, n_lines, sizeof(*lines), line_cmp);
 
-    write_lines_to_file(lines, n_lines, file_name);
+    write_lines_to_file(lines, n_lines);
 }
 
 /*!
- * Writes lines to file named file_name
+ * Writes lines to the output file
  *
  * @param lines pointer to an array of lines
  * @param n_lines size of array
- * @param file_name name of output file
+ *
+ * @note The output file name is OUTPUT_FILE_NAME
  */
-void write_lines_to_file(const char* const* lines,
-    int n_lines,
-    const char* file_name)
+void write_lines_to_file(const char *const *lines, int n_lines)
 {
-    FILE* output = NULL;
+    FILE *output = NULL;
 
-    if ((output = fopen(file_name, "w")) != NULL) {
+    if ((output = fopen(OUTPUT_FILE_NAME, "w")) != NULL) {
         int i = 0;
         for (i = 0; i < n_lines; ++i) {
-            const char* line_ptr = lines[i];
+            const char *line_ptr = lines[i];
 
             while (isspace(*line_ptr)) {
                 ++line_ptr;
             }
 
-            if (isupper(line_ptr[0]) && islower(line_ptr[1])) {
+            if (line_ptr[0] && islower(line_ptr[1])) {
                 fprintf(output, "%s\n", line_ptr);
             }
         }
+
         fclose(output);
     } else {
         printf("ERROR: fopen returned NULL in q_sort_with_output_to_file\n");
@@ -393,30 +376,26 @@ void write_lines_to_file(const char* const* lines,
 }
 
 /*!
- * Sorts lines using the tree sort algorithm and writes the sorted lines to
- * file_name
+ * Sorts lines using the tree sort algorithm and writes the sorted lines to output file
  *
  * @param [in] lines pointer to an array of lines
  * @param [in] n_lines array size
  * @param [in] line_cmp pointer to line comparator function
  * @param [in] file_name name of file to which the result of sorting is written
  *
- * @note Filename is opened in "w" mode
+ * @note The output file name is OUTPUT_FILE_NAME
  */
-void tree_sort_with_output_to_file(const char* const* lines,
-    int n_lines,
-    int (*line_cmp)(const void*, const void*),
-    const char* file_name)
+void tree_sort_with_output_to_file(const char *const *lines, int n_lines,
+                                   int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
     assert(line_cmp != NULL);
-    assert(file_name != NULL);
 
     assert(n_lines > 0);
 
-    struct node* root = NULL;
+    struct node *root = NULL;
     if ((root = generate_bst(lines, n_lines, line_cmp)) != NULL) {
-        write_bst_to_file(root, file_name);
+        write_bst_to_file(root);
         delete_bst(root);
     } else {
         printf("ERROR: generate_bst returned NULL in main\n");
@@ -435,17 +414,16 @@ void tree_sort_with_output_to_file(const char* const* lines,
  *
  * @note Returns NULL in case of failure
  */
-struct node* generate_bst(const char* const* lines,
-    int n_lines,
-    int (*line_cmp)(const void*, const void*))
+struct node *generate_bst(const char *const *lines, int n_lines,
+                          int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
     assert(line_cmp != NULL);
 
     assert(n_lines > 0);
 
-    struct node* root = NULL;
-    if ((root = (struct node*)calloc(1, sizeof(struct node))) != NULL) {
+    struct node *root = NULL;
+    if ((root = (struct node *) calloc(1, sizeof(*root))) != NULL) {
         root->line = lines[0];
 
         root->left = NULL;
@@ -477,9 +455,8 @@ struct node* generate_bst(const char* const* lines,
  *
  * @note Returns NULL in case of failure
  */
-struct node* insert_node_into_bst(struct node* parent,
-    const char* line,
-    int (*line_cmp)(const void*, const void*))
+struct node *insert_node_into_bst(struct node *parent, const char *line,
+                                  int (*line_cmp)(const void *, const void *))
 {
     assert(parent != NULL);
     assert(line != NULL);
@@ -487,7 +464,7 @@ struct node* insert_node_into_bst(struct node* parent,
 
     if ((*line_cmp)(&parent->line, &line) >= 0) {
         if (parent->left == NULL) {
-            if ((parent->left = (struct node*)calloc(1, sizeof(struct node))) != NULL) {
+            if ((parent->left = (struct node *) calloc(1, sizeof(*parent))) != NULL) {
                 parent->left->line = line;
                 parent->left->left = NULL;
                 parent->left->right = NULL;
@@ -502,7 +479,7 @@ struct node* insert_node_into_bst(struct node* parent,
         }
     } else {
         if (parent->right == NULL) {
-            if ((parent->right = (struct node*)calloc(1, sizeof(struct node))) != NULL) {
+            if ((parent->right = (struct node *) calloc(1, sizeof(*parent))) != NULL) {
                 parent->right->line = line;
                 parent->right->left = NULL;
                 parent->right->right = NULL;
@@ -522,18 +499,18 @@ struct node* insert_node_into_bst(struct node* parent,
  * Writes BST to file output
  *
  * @param [in] current pointer to current node
- * @param [in] output pointer to output file
+ *
+ * @note The output file name is OUTPUT_FILE_NAME
  */
-void write_bst_to_file(const struct node* current, const char* file_name)
+void write_bst_to_file(const struct node *current)
 {
     assert(current != NULL);
-    assert(file_name != NULL);
 
     static int invoked = 0;
-    static FILE* output = NULL;
+    static FILE *output = NULL;
 
     if (!invoked) {
-        if ((output = fopen(file_name, "w")) == NULL) {
+        if ((output = fopen(OUTPUT_FILE_NAME, "w")) == NULL) {
             printf("ERROR: invalid file name passed to fopen\n");
 
             return;
@@ -543,21 +520,21 @@ void write_bst_to_file(const struct node* current, const char* file_name)
     }
 
     if (current->left != NULL) {
-        write_bst_to_file(current->left, file_name);
+        write_bst_to_file(current->left);
     }
 
-    const char* line_ptr = current->line;
+    const char *line_ptr = current->line;
 
     while (isspace(*line_ptr)) {
         ++line_ptr;
     }
 
-    if (isupper(line_ptr[0]) && islower(line_ptr[1])) {
+    if (line_ptr[0] && islower(line_ptr[1])) {
         fprintf(output, "%s\n", line_ptr);
     }
 
     if (current->right != NULL) {
-        write_bst_to_file(current->right, file_name);
+        write_bst_to_file(current->right);
     }
 }
 
@@ -566,7 +543,7 @@ void write_bst_to_file(const struct node* current, const char* file_name)
  *
  * @param [in, out] current pointer to current node
  */
-void delete_bst(struct node* current)
+void delete_bst(struct node *current)
 {
     assert(current != NULL);
 
@@ -620,12 +597,12 @@ int to_lower(int c)
  * @return 0, if *arg1 is equal to *arg2, 1 if *arg1 is greater than *arg2, -1
  * otherwise
  */
-int line_cmp_direct(const void* arg1, const void* arg2)
+int line_cmp_direct(const void *arg1, const void *arg2)
 {
     assert(arg1 != NULL);
     assert(arg2 != NULL);
 
-    const char *line1 = *((const char**)arg1), *line2 = *((const char**)arg2);
+    const char *line1 = *((const char **) arg1), *line2 = *((const char **) arg2);
 
     while (*line1 && *line2) {
         if (to_lower(*line1) == to_lower(*line2)) {
@@ -673,9 +650,9 @@ int line_cmp_direct(const void* arg1, const void* arg2)
  * @return 0, if *arg1 is equal to *arg2, 1 if *arg1 is greater than *arg2, -1
  * otherwise
  */
-int line_cmp_reversed(const void* arg1, const void* arg2)
+int line_cmp_reversed(const void *arg1, const void *arg2)
 {
-    const char *line1 = *((const char**)arg1), *line2 = *((const char**)arg2);
+    const char *line1 = *((const char **) arg1), *line2 = *((const char **) arg2);
     size_t len1 = strlen(line1), len2 = strlen(line2);
     len1 = (len1 > 0) ? len1 : 1;
     len2 = (len2 > 0) ? len2 : 1;
