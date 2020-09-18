@@ -32,6 +32,14 @@ struct node {
     struct node *right;
 };
 
+/*!
+ * Enum describing possible line sorting modes
+ */
+enum sort_mode {
+    DIRECT = 'd',
+    REVERSED = 'r'
+};
+
 int eugene_onegin_sort(const char *input_file_name, char sort_mode);
 
 char **read_lines_from_file(const char *file_name, size_t *n_lines);
@@ -70,11 +78,11 @@ int main(int argc, const char *argv[])
 
     if (argc >= 2 && argc <= 3) {
         const char *input_file_name = argv[1];
-        char sort_mode = 'd';
+        enum sort_mode mode = DIRECT;
 
         if (argc == 3) {
             if ((strcmp(argv[2], "--r") == 0) || (strcmp(argv[2], "-reversed") == 0)) {
-                sort_mode = argv[2][2];
+                mode = REVERSED;
             } else {
                 printf(
                     "ERROR: invalid optional command line argument (must be "
@@ -83,7 +91,7 @@ int main(int argc, const char *argv[])
             }
         }
 
-        if (!eugene_onegin_sort(input_file_name, sort_mode)) {
+        if (!eugene_onegin_sort(input_file_name, mode)) {
             return EXIT_SUCCESS;
         } else {
             printf("ERROR: eugene_onegin_sort returned a non-zero value in main\n");
@@ -114,13 +122,13 @@ int main(int argc, const char *argv[])
  * defined by the sort mode
  *
  * @param [in] input_file_name pointer to string containing the input file name
- * @param [in] sort_mode char which set the sort mode ('d' or 'r')
+ * @param [in] mode enum constant which sets the sort mode ('d' or 'r')
  *
  * @return 0 in case of success, non-zero value otherwise
  *
  * @note The output file name is OUTPUT_FILE_NAME
  */
-int eugene_onegin_sort(const char *input_file_name, char sort_mode)
+int eugene_onegin_sort(const char *input_file_name, enum sort_mode mode)
 {
     size_t n_lines = 0;
     char **lines = NULL;
@@ -128,7 +136,7 @@ int eugene_onegin_sort(const char *input_file_name, char sort_mode)
     if (((lines = read_lines_from_file(input_file_name, &n_lines)) != NULL) || (n_lines == 0)) {
         if (n_lines > 0) {
             tree_sort_with_output_to_file(lines, n_lines,
-                                          (sort_mode == 'd') ? line_cmp_direct : line_cmp_reversed);
+                                          (mode == DIRECT) ? line_cmp_direct : line_cmp_reversed);
         } else {
             printf("Input file was empty, so output file wasn't created\n");
         }
