@@ -46,16 +46,12 @@ char **read_lines_from_file(const char *file_name, size_t *n_lines);
 size_t count_lines_in_buffer();
 int read_file_to_buffer(const char *file_name);
 
-void q_sort_with_output_to_file(char **lines, size_t n_lines,
-                                int (*line_cmp)(const void *, const void *));
+void q_sort_with_output_to_file(char **lines, size_t n_lines, int (*line_cmp)(const void *, const void *));
 void write_lines_to_file(const char *const *lines, int n_lines);
 
-void tree_sort_with_output_to_file(const char *const *lines, size_t n_lines,
-                                   int (*line_cmp)(const void *, const void *));
-struct node *generate_bst(const char *const *lines, size_t n_lines,
-                          int (*line_cmp)(const void *, const void *));
-struct node *insert_node_into_bst(struct node *parent, const char *line,
-                                  int (*line_cmp)(const void *, const void *));
+void tree_sort_with_output_to_file(const char *const *lines, size_t n_lines, int (*line_cmp)(const void *, const void *));
+struct node *generate_bst(const char *const *lines, size_t n_lines, int (*line_cmp)(const void *, const void *));
+struct node *insert_node_into_bst(struct node *parent, const char *line, int (*line_cmp)(const void *, const void *));
 void write_bst_to_file(const struct node *current);
 void delete_bst(struct node *current);
 
@@ -66,15 +62,10 @@ int line_cmp_reversed(const void *arg1, const void *arg2);
 
 int main(int argc, const char *argv[])
 {
-    printf(
-        "Eugene Onegin sort\n\n"
-        "Poem lines from input file (mandatory first command line argument) "
-        "will be sorted and\n"
-        "written to output file \"output.txt\". The order in which 2 lines "
-        "are processed\n"
-        "during comparison is direct (default) or reversed (set by optional "
-        "command line\n"
-        "argument \"-reversed\" (\"--r\"))\n\n");
+    printf("Eugene Onegin sort\n\n"
+           "Poem lines from input file (mandatory first command line argument) will be sorted and written to output file \"output.txt\".\n"
+           "The order in which 2 lines are processed during comparison is direct by default or reversed (set by optional command line\n"
+           "argument \"-reversed\" (\"--r\"))\n\n");
 
     if (argc >= 2 && argc <= 3) {
         const char *input_file_name = argv[1];
@@ -85,9 +76,7 @@ int main(int argc, const char *argv[])
                 mode = REVERSED;
             } else {
                 printf(
-                    "ERROR: invalid optional command line argument (must be "
-                    "\"-reversed\""
-                    "or \"--r\")\n");
+                    "ERROR: invalid optional command line argument (must be \"-reversed\" or \"--r\")\n");
             }
         }
 
@@ -100,12 +89,8 @@ int main(int argc, const char *argv[])
         }
     } else if (argc > 3) {
         printf(
-            "ERROR: invalid command line arguments - first must be the input "
-            "file name,\n"
-            "the second one is optional and must be equal to \"-reversed\" or "
-            "\"--r\" (sets\n"
-            "the order in which 2 lines will be processed during comparison to "
-            "reversed)\n");
+            "ERROR: invalid command line arguments - first must be the input file name,\n the second one is optional and must be equal\n"
+            "to \"-reversed\" or \"--r\" (sets\n the order in which 2 lines will be processed during comparison to reversed)\n");
 
         return EXIT_FAILURE;
     } else {
@@ -339,8 +324,7 @@ size_t count_lines_in_buffer()
  *
  * @note The output file name is OUTPUT_FILE_NAME
  */
-void q_sort_with_output_to_file(char **lines, size_t n_lines,
-                                int (*line_cmp)(const void *, const void *))
+void q_sort_with_output_to_file(char **lines, size_t n_lines, int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
     assert(line_cmp != NULL);
@@ -394,8 +378,7 @@ void write_lines_to_file(const char *const *lines, size_t n_lines)
  *
  * @note The output file name is OUTPUT_FILE_NAME
  */
-void tree_sort_with_output_to_file(const char *const *lines, size_t n_lines,
-                                   int (*line_cmp)(const void *, const void *))
+void tree_sort_with_output_to_file(const char *const *lines, size_t n_lines, int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
     assert(line_cmp != NULL);
@@ -423,8 +406,7 @@ void tree_sort_with_output_to_file(const char *const *lines, size_t n_lines,
  *
  * @note Returns NULL in case of failure
  */
-struct node *generate_bst(const char *const *lines, size_t n_lines,
-                          int (*line_cmp)(const void *, const void *))
+struct node *generate_bst(const char *const *lines, size_t n_lines, int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
     assert(line_cmp != NULL);
@@ -464,8 +446,7 @@ struct node *generate_bst(const char *const *lines, size_t n_lines,
  *
  * @note Returns NULL in case of failure
  */
-struct node *insert_node_into_bst(struct node *parent, const char *line,
-                                  int (*line_cmp)(const void *, const void *))
+struct node *insert_node_into_bst(struct node *parent, const char *line, int (*line_cmp)(const void *, const void *))
 {
     assert(parent != NULL);
     assert(line != NULL);
