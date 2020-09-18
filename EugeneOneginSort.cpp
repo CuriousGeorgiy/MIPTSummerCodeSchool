@@ -688,9 +688,9 @@ int to_lower(int ch)
  * Compares two lines, discarding non-alpha characters, processing the lines in direct order
  *
  * @param [in] adr_of_ptr_to_line1 first address of pointer to line
- * @param [in] adr_of_ptr_to_line1 second address of pointer to line
+ * @param [in] adr_of_ptr_to_line2 second address of pointer to line
  *
- * @return 0, if line1 is equal to line2, 1 if line1 is greater than line22, -1 otherwise
+ * @return 0, if line1 is equal to line2, 1 if line1 is greater than line2, -1 otherwise
  * otherwise
  */
 int line_cmp_direct(const void *adr_of_ptr_to_line1, const void *adr_of_ptr_to_line2)
