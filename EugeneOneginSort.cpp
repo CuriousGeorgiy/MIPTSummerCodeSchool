@@ -34,17 +34,17 @@ struct node {
 
 int eugene_onegin_sort(const char *input_file_name, char sort_mode);
 
-char **read_lines_from_file(const char *file_name, int *n_lines);
-int count_lines_in_buffer();
+char **read_lines_from_file(const char *file_name, size_t *n_lines);
+size_t count_lines_in_buffer();
 int read_file_to_buffer(const char *file_name);
 
-void q_sort_with_output_to_file(char **lines, int n_lines,
+void q_sort_with_output_to_file(char **lines, size_t n_lines,
                                 int (*line_cmp)(const void *, const void *));
 void write_lines_to_file(const char *const *lines, int n_lines);
 
-void tree_sort_with_output_to_file(const char *const *lines, int n_lines,
+void tree_sort_with_output_to_file(const char *const *lines, size_t n_lines,
                                    int (*line_cmp)(const void *, const void *));
-struct node *generate_bst(const char *const *lines, int n_lines,
+struct node *generate_bst(const char *const *lines, size_t n_lines,
                           int (*line_cmp)(const void *, const void *));
 struct node *insert_node_into_bst(struct node *parent, const char *line,
                                   int (*line_cmp)(const void *, const void *));
@@ -122,13 +122,13 @@ int main(int argc, const char *argv[])
  */
 int eugene_onegin_sort(const char *input_file_name, char sort_mode)
 {
-    int n_lines = 0;
+    size_t n_lines = 0;
     char **lines = NULL;
 
     if (((lines = read_lines_from_file(input_file_name, &n_lines)) != NULL) || (n_lines == 0)) {
         if (n_lines > 0) {
             tree_sort_with_output_to_file(lines, n_lines,
-                                       (sort_mode == 'd') ? line_cmp_direct : line_cmp_reversed);
+                                          (sort_mode == 'd') ? line_cmp_direct : line_cmp_reversed);
         } else {
             printf("Input file was empty, so output file wasn't created\n");
         }
@@ -158,7 +158,7 @@ int eugene_onegin_sort(const char *input_file_name, char sort_mode)
  *
  * @warning Utilizes global char buffer BUFFER. BUFFER must be freed by caller
  */
-char **read_lines_from_file(const char *file_name, int *n_lines)
+char **read_lines_from_file(const char *file_name, size_t *n_lines)
 {
     assert(file_name != NULL);
     assert(n_lines != NULL);
@@ -173,7 +173,7 @@ char **read_lines_from_file(const char *file_name, int *n_lines)
             lines[0] = strtok(BUFFER + 1, "\n");
             lines[0][-1] = '\0';
 
-            int i = 1;
+            size_t i = 1;
             for (i = 1; i < *n_lines; ++i) {
                 lines[i] = strtok(NULL, "\n");
                 lines[i][-1] = '\0';
@@ -299,11 +299,12 @@ int read_file_to_buffer(const char *file_name)
  *
  * @return the number of lines
  */
-int count_lines_in_buffer()
+size_t count_lines_in_buffer()
 {
     assert(BUFFER != NULL);
 
-    int pre_c = EOF, n_lines = 0;
+    int pre_c = EOF;
+    size_t n_lines = 0;
     const char *reader = BUFFER + 1;
 
     while (*reader) {
@@ -311,7 +312,7 @@ int count_lines_in_buffer()
             ++n_lines;
         }
 
-        pre_c = *reader++;
+        pre_c = (unsigned char) *(reader++);
     }
 
     if ((pre_c != EOF) && (pre_c != '\n')) {
@@ -330,7 +331,7 @@ int count_lines_in_buffer()
  *
  * @note The output file name is OUTPUT_FILE_NAME
  */
-void q_sort_with_output_to_file(char **lines, int n_lines,
+void q_sort_with_output_to_file(char **lines, size_t n_lines,
                                 int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
@@ -351,12 +352,12 @@ void q_sort_with_output_to_file(char **lines, int n_lines,
  *
  * @note The output file name is OUTPUT_FILE_NAME
  */
-void write_lines_to_file(const char *const *lines, int n_lines)
+void write_lines_to_file(const char *const *lines, size_t n_lines)
 {
     FILE *output = NULL;
 
     if ((output = fopen(OUTPUT_FILE_NAME, "w")) != NULL) {
-        int i = 0;
+        size_t i = 0;
         for (i = 0; i < n_lines; ++i) {
             const char *line_ptr = lines[i];
 
@@ -385,7 +386,7 @@ void write_lines_to_file(const char *const *lines, int n_lines)
  *
  * @note The output file name is OUTPUT_FILE_NAME
  */
-void tree_sort_with_output_to_file(const char *const *lines, int n_lines,
+void tree_sort_with_output_to_file(const char *const *lines, size_t n_lines,
                                    int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
@@ -414,7 +415,7 @@ void tree_sort_with_output_to_file(const char *const *lines, int n_lines,
  *
  * @note Returns NULL in case of failure
  */
-struct node *generate_bst(const char *const *lines, int n_lines,
+struct node *generate_bst(const char *const *lines, size_t n_lines,
                           int (*line_cmp)(const void *, const void *))
 {
     assert(lines != NULL);
@@ -429,7 +430,7 @@ struct node *generate_bst(const char *const *lines, int n_lines,
         root->left = NULL;
         root->right = NULL;
 
-        int i = 1;
+        size_t i = 1;
         for (i = 1; i < n_lines; ++i) {
             if (insert_node_into_bst(root, lines[i], line_cmp) == NULL) {
                 printf("ERROR: insert_node_into_bst returned NULL in generate_bst");
@@ -445,7 +446,7 @@ struct node *generate_bst(const char *const *lines, int n_lines,
 }
 
 /*!
- * Inserts node into BST
+ * Recursively inserts node into BST
  *
  * @param [in, out] parent pointer to parent node
  * @param [in] line pointer to line of chars
