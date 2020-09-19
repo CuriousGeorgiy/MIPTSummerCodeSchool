@@ -51,7 +51,7 @@ struct node {
 };
 
 /*!
- * Enum defining possible line sorting modes
+ * Enum defining possible line sort modes
  */
 enum sort_mode {
     DIRECT, REVERSED
@@ -266,9 +266,9 @@ int read_file_to_buffer(const char *input_file_name)
         return -1;
     }
 
-    DWORD n_chars = GetFileSize(input_file_handle, NULL);
+    DWORD input_file_size = GetFileSize(input_file_handle, NULL);
 
-    if (n_chars > 0) {
+    if (input_file_size > 0) {
         HANDLE input_file_mapping_handle = CreateFileMappingA(input_file_handle, NULL, PAGE_READONLY, 0, 0, NULL);
 
         if (input_file_mapping_handle == NULL) {
@@ -297,13 +297,13 @@ int read_file_to_buffer(const char *input_file_name)
             return -1;
         }
 
-        if ((BUFFER = (char *) calloc(n_chars + 2, sizeof(*BUFFER))) == NULL) {
+        if ((BUFFER = (char *) calloc(input_file_size + 2, sizeof(*BUFFER))) == NULL) {
             ERROR_OCCURED_CALLING(calloc, "returned NULL");
 
             return -1;
         }
 
-        CopyMemory(BUFFER + 1, input_file_map_view, n_chars);
+        memcpy(BUFFER + 1, input_file_map_view, input_file_size);
 
         int error_flag1 = 0, error_flag2 = 0, error_flag3 = 0;
 
