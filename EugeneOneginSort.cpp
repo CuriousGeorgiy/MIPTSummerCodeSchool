@@ -4,10 +4,6 @@
 
 #define _CRT_SECURE_NO_WARNINGS
 
-#define ERROR_OCCURED(msg) do {                                                                                  \
-                               fprintf(stderr, "%s at %s(%d):%s\n\n", (msg), __FILE_NAME__, __LINE__, __func__); \
-                           } while (0)
-
 #define ERROR_OCCURED_CALLING(func, msg) do {                                                                                            \
                                              fprintf(stderr, "%s %s at %s(%d):%s\n\n", #func, (msg), __FILE_NAME__, __LINE__, __func__); \
                                          } while (0)
@@ -97,7 +93,7 @@ int main(int argc, const char *argv[])
            "default or quick sort (set by optional command line argument \"-quick\" or \"--q\"). Also, the original\n"
            "text will be appended to the output file\n\n");
 
-    if (argc >= N_MANDATORY_ARGS && argc <= N_MANDATORY_ARGS + N_OPTIONAL_ARGS) {
+    if (argc >= N_MANDATORY_ARGS) {
         const char *input_file_name = argv[1];
         enum sort_mode mode = DIRECT;
         enum sort_alg alg = TREE;
@@ -116,7 +112,7 @@ int main(int argc, const char *argv[])
         }
 
         if (matched_args != argc - N_OPTIONAL_ARGS + 1) {
-            ERROR_OCCURED("Invalid optional command line arguments (must be \"-reversed\" or \"--r\" and \"-quick\"\n"
+            printf("Invalid optional command line arguments (must be \"-reversed\" or \"--r\" and \"-quick\"\n"
                           "or \"--q\") - using correctly matched arguments or defaults");
         }
 
@@ -137,14 +133,8 @@ int main(int argc, const char *argv[])
 
             return EXIT_FAILURE;
         }
-    } else if (argc > N_MANDATORY_ARGS + N_OPTIONAL_ARGS) {
-        ERROR_OCCURED("Invalid command line arguments - first must be the input file name,\n the second one is\n"
-                      "optional and must be equal to \"-reversed\" or \"--r\" (sets\n the order in which 2 lines will\n"
-                      "be processed during comparison to reversed)");
-
-        return EXIT_FAILURE;
     } else {
-        ERROR_OCCURED("Run the program with command line arguments");
+        printf("Please rerun the program and specify the input file as the first command line argument\n");
 
         return EXIT_FAILURE;
     }
@@ -171,11 +161,13 @@ int eugene_onegin_sort(const char *input_file_name, enum sort_mode mode,
         return -1;
     }
 
+    assert(BUFFER);
+
     size_t n_lines = count_lines_in_buffer();
     char **lines = get_lines_from_buffer(n_lines);
 
     if ((lines == NULL) && (n_lines != 0)) {
-        ERROR_OCCURED("read_lines_from_file returned NULL and n_lines != 0");
+        ERROR_OCCURED_CALLING(read_lines_from_file, "returned NULL and n_lines != 0");
 
         free(BUFFER);
 
